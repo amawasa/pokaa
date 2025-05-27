@@ -1,23 +1,67 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <title>
-    kokoro
-  </title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>栄進祭ホームページ</title>
+
+  <link rel="stylesheet" href="style.css">
 </head>
-  <body>
-    <div class="aa">
-      <p>
-        kokoroha tensai
-      </p>
+<body>
+  <header>
+<a href="#home">
+      <h1 class="title">栄進祭</h1>
+  </a>
+    <div class="hamburger" id="hamburger">&#9776;</div>
+    <nav class="slide-menu" id="slideMenu">
+  <ul>
+    <li><a href="#home">ホームページ</a></li>
+    <li><a href="#about">企画</a></li>
+    <li><a href="#events">イベント</a></li>
+    <li><a href="#map">校内マップ</a></li>
+  </ul>
+</nav>
+
+    <div class="overlay" id="overlay"></div>
+  </header>
+
+<main>
+  <section id="about">
+    <h2>栄進祭について</h2>
+    <p>栄進祭は、生徒が主体となって企画・運営を行う年に一度のイベントです。</p>
+  </section>
+
+  <section id="events" class="hidden">
+    <h2>企画紹介</h2>
+    <ul class="event-list">
+      <li>お化け屋敷「呪いの鏡」</li>
+      <li>演劇部「白雪姫」公演</li>
+      <li>軽音部ライブ</li>
+    </ul>
+  </section>
+
+  <section id="map" class="hidden">
+    <h2>校内マップ</h2>
+    <p>1F：体育館 / 2F：教室企画 / 3F：展示 / 他</p>
+  </section>
+
+  <section id="home" class="hidden">
+    <img src="poster">栄進祭poster
+    <h2>アクセス</h2>
+    <p>○○高校<br>〒123-4567 茨城県ひたち野うしく<br>最寄駅：ひたちのうしく 徒歩○分</p>
+    <button class="tobidasu">map表示</button>
+
+    <div class="bbuttonnaiyou hide">
+      <button class="close-btn">×</button>
+      <p>ここに地図や好きな内容を入れてください</p>
     </div>
-  </body>
-  <style>
-    body {
-      margin: 0;
-    
-    .aa{
-      background-color: green;
-      width: 100%;
-  </style>
+  </section>
+</main>
+
+  <footer>
+    <p>&copy; 2025　牛久栄進高校生徒会</p>
+  </footer>
+</body>
+  <script src="script.js"></script>
 </html>

@@ -52,19 +52,32 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 「map表示」ボタン処理（accessセクション内）
-  const tobidasuBtn = document.querySelector('.tobidasu');
-  const bbuttonnaiyou = document.querySelector('.bbuttonnaiyou');
-  const closeBtn = bbuttonnaiyou?.querySelector('.close-btn');
+const tobidasuBtn = document.querySelector('.tobidasu');
+const bbuttonnaiyou = document.querySelector('.bbuttonnaiyou');
+const closeBtn = bbuttonnaiyou.querySelector('.close-btn');
+const mapOverlay = document.querySelector('.map-overlay');
 
-  if (tobidasuBtn && bbuttonnaiyou && closeBtn) {
-    tobidasuBtn.addEventListener('click', () => {
-      bbuttonnaiyou.classList.add('show');
-    });
+tobidasuBtn.addEventListener('click', () => {
+  bbuttonnaiyou.classList.add('show');
+  mapOverlay.classList.add('show');
+});
 
-    closeBtn.addEventListener('click', () => {
-      bbuttonnaiyou.classList.remove('show');
-    });
-  }
+closeBtn.addEventListener('click', () => {
+  bbuttonnaiyou.classList.remove('show');
+  mapOverlay.classList.remove('show');
+});
+
+// オーバーレイクリックで閉じるようにする場合（任意）
+mapOverlay.addEventListener('click', () => {
+  bbuttonnaiyou.classList.remove('show');
+  mapOverlay.classList.remove('show');
+});
+
+
+
+
+
+
 
   // 初期表示を home に設定
   showSection("home");

@@ -175,22 +175,31 @@ a {
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, 20%); /* 最初は少し下から */
   width: 80%;
   height: 80%;
   background: white;
-  border: 2px solid #444;
+  z-index: 1100;
   padding: 20px;
-  z-index: 1000; /* オーバーレイの上 */
   overflow-y: auto;
-  display: none;
   border-radius: 12px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  opacity: 0;
+  display: none;
+  transition: opacity 0.8s ease, transform 0.8s ease;
 }
 
+/* 表示された直後に使うクラス */
 .bbuttonnaiyou.show {
   display: block;
 }
+
+/* 画面中央に来たら発動（透明→表示、下から上へ） */
+.bbuttonnaiyou.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%);
+}
+
 
 .bbuttonnaiyou .close-btn {
   position: absolute;

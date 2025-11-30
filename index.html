@@ -90,6 +90,12 @@ const ctx = canvas.getContext('2d');
 const MAP_SIZE = 10000; 
 const BOSS_HP_BAR = document.getElementById('boss-hp-bar');
 const BOSS_HP_FILL = document.getElementById('boss-hp-fill');
+const BULLET_QUEEN_COOLDOWN = 90; // BulletQueenBossの弾発射間隔 (1.5秒)   
+const TELEPORT_COOLDOWN = 180; // TeleportHunterBossのテレポート間隔 (3秒)   
+const TELEPORT_WARNING_FRAMES = 60; // テレポート警告線を表示する時間 (1秒)
+const SLIDE_INERTIA = 0.98; // 慣性力（スライディング時の減速の弱さ）
+const SLIDE_INPUT_CORRECTION = 0.02; // 慣性力への入力補正の割合
+
 
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.addEventListener('resize', resize);
@@ -120,24 +126,24 @@ function getStatItem(statId) { return UPGRADES.find(u => u.type === 'stat' && u.
 
 // --- データ定義 ---
 
-// 1. 強化アイテムリスト (変更なし)
+/// 1. 強化アイテムリスト
 const UPGRADES = [
   // 武器 (ID 0-14)
-  { id: 'wand', type: 'wep', name: '魔法の杖', icon: '🪄', maxLv: 8, wepId: 0, range: 400, desc: '連射頻度、弾速が向上' },
+  { id: 'wand', type: 'wep', name: '魔法の杖', icon: '🪄', maxLv: 8, wepId: 0, range: 400, desc: '連射頻度、弾速が向上。Lv3から太いビームに！' },
   { id: 'knife', type: 'wep', name: '投げナイフ', icon: '🔪', maxLv: 8, wepId: 1, range: 300, desc: '弾速、発射数が増加' },
-  { id: 'axe', type: 'wep', name: '斧', icon: '🪓', maxLv: 8, wepId: 2, range: 600, desc: '威力、範囲が向上' },
+  { id: 'axe', type: 'wep', name: '斧', icon: '🪓', maxLv: 8, wepId: 2, range: 600, desc: '進行方向に放物線を描く大きな弾を出す' },
   { id: 'cross', type: 'wep', name: '十字架', icon: '✝️', maxLv: 8, wepId: 3, range: 450, desc: '追尾性能、弾速が向上' },
   { id: 'garlic', type: 'wep', name: 'ニンニク', icon: '🧄', maxLv: 8, wepId: 4, range: 120, desc: 'オーラ範囲、ダメージが向上' },
   { id: 'bible', type: 'wep', name: '聖書', icon: '📕', maxLv: 8, wepId: 5, range: 150, desc: '回転数（発射数）、持続時間が向上' },
   { id: 'fireWand', type: 'wep', name: '炎の杖', icon: '🔥', maxLv: 8, wepId: 6, range: 500, desc: '火の玉の威力、爆発範囲が向上' },
   { id: 'holyWater', type: 'wep', name: '聖水', icon: '💧', maxLv: 8, wepId: 7, range: 250, desc: 'ダメージ床の持続時間、出現頻度向上' },
   { id: 'lightning', type: 'wep', name: '雷の指輪', icon: '⚡', maxLv: 8, wepId: 8, range: 9999, desc: '落雷の連鎖数、威力が向上' },
-  { id: 'pentagram', type: 'wep', name: '五芒星', icon: '⭐', maxLv: 1, wepId: 9, range: 9999, desc: '画面内の敵をすべて消去。' },
+  { id: 'pentagram', type: 'wep', name: '五芒星', icon: '⭐', maxLv: 8, wepId: 9, range: 9999, desc: '画面内の敵をHP割合で攻撃する' },
   { id: 'sword', type: 'wep', name: '大剣', icon: '⚔️', maxLv: 8, wepId: 10, range: 180, desc: 'ニンニクより広い範囲に強力な一撃' },
-  { id: 'boomerang', type: 'wep', name: 'ブーメラン', icon: '↩️', maxLv: 8, wepId: 11, range: 500, desc: '往復する投擲武器' },
+  { id: 'boomerang', type: 'wep', name: 'ブーメラン', icon: '↩️', maxLv: 8, wepId: 11, range: 500, desc: 'レベルアップでクールタイムが2/3倍に' },
   { id: 'drone', type: 'wep', name: 'ドローン', icon: '🚁', maxLv: 8, wepId: 12, range: 300, desc: '自動攻撃するお供を召喚' },
   { id: 'mine', type: 'wep', name: '地雷', icon: '💣', maxLv: 8, wepId: 13, range: 9999, desc: '通過した場所に地雷を設置' },
-  { id: 'icicle', type: 'wep', name: '氷柱', icon: '❄️', maxLv: 8, wepId: 14, range: 600, desc: '当たると反射する弾を発射' },
+  { id: 'icicle', type: 'wep', name: '氷柱', icon: '❄️', maxLv: 8, wepId: 14, range: 600, desc: 'レベルアップで反射回数が1回追加' },
 
   // パッシブ能力 (MaxLv: 20)
   { id: 'dmg', type: 'stat', name: 'ほうれん草', icon: '🥬', maxLv: 20, baseDesc: '攻撃ダメージ', unit: '%', apply: (p) => p.dmgMult += 0.1, val: 10 },
@@ -154,8 +160,8 @@ const UPGRADES = [
   { id: 'evasion', type: 'stat', name: 'マント', icon: '🥼', maxLv: 20, baseDesc: '回避率 (最大60%)', unit: '%', apply: (p) => p.evasion = Math.min(0.6, p.evasion + 0.03), val: 3 },
   { id: 'regen', type: 'stat', name: '生命の珠', icon: '💚', maxLv: 10, baseDesc: 'HP自動回復', unit: '/秒', apply: (p) => p.regen += 1, val: 1 }
 ];
-
 // 2. 敵の設定 (変更なし)
+// 2. 敵の設定
 const ENEMY_TYPES = [
   { time: 0,  name: 'Bat',      hp: 10, speed: 1.0, size: 10, color: '#aa55ff', exp: 1, type: 'normal' },
   { time: 30, name: 'Skeleton', hp: 20, speed: 0.7, size: 12, color: '#dddddd', exp: 2, type: 'normal' },
@@ -171,7 +177,7 @@ const ENEMY_TYPES = [
   { time: 660, name: 'ArcMage', hp: 40000, speed: 0.3, size: 45, color: '#00ccff', exp: 1200, type: 'ArcMageBoss' }
 ];
 
-// 3. 特別ドロップ (変更なし)
+// 3. 特別ドロップ
 const DROPS = [
   { type: 'coin', color: 'gold', size: 6, icon: '💰', effect: (p) => { score += 100; showFloat(p.x, p.y, "+100G", "gold"); } },
   { type: 'food', color: 'pink', size: 8, icon: '🍕', effect: (p) => { p.hp = Math.min(p.hp+30, p.maxHp); showFloat(p.x, p.y, "Heal!", "pink"); } },
@@ -183,22 +189,24 @@ const DROPS = [
     items.filter(i => i.kind === 'exp').forEach(i => { i.x = p.x; i.y = p.y; }); 
     showFloat(p.x, p.y, "Exp Collect!", "lightblue"); 
   } },
+  { type: 'chest', color: 'gold', size: 10, icon: '🎁', effect: (p) => { showLevelUpScreen(true); showFloat(p.x, p.y, "Chest!", "gold"); } }
 ];
 
 // --- ゲーム変数 (変更なし) ---
 let player = { 
   x: 0, y: 0, size: 15, color: '#00d2ff', 
-  hp: 100, maxHp: 100, exp: 0, nextExp: 10, lv: 1, 
-  speed: 3, armor: 0, regen: 0, luck: 0.01, magnet: 80, greed: 1,
+  hp: 100000, maxHp: 100000, exp: 0, nextExp: 10, lv: 1, 
+  speed: 3, armor: 0, regen: 0, luck: 1, magnet: 80, greed: 1,
   dmgMult: 1.0, areaMult: 1.0, cdMult: 1.0, amount: 0, projSpeedMult: 1.0,
   rangeMult: 1.0, evasion: 0.0, 
+  invincibleTimer: 0, 
   weapons: [ {id:0, lv:1, cd:0} ],
   statLv: {},
   lastMove: {x:0, y:0, angle: 0}, 
   postPauseTimer: 0,
-  isSliding: false
+  isSliding: false,
+  levelUpDamageBoost: 1.0 
 };
-
 let bullets = [];
 let enemyBullets = [];
 let enemies = [];
@@ -220,7 +228,8 @@ let eventModifiers = { enemyDmgMult: 1.0, speedDamp: 1.0, expMult: 1.0, cdMult: 
 let meteorWarning = [];
 let minEnemySpawnRate = 10; 
 
-// 3. イベントデータ (変更なし)
+
+// 4. イベントデータ
 const GAME_EVENTS = [
     { time: 120, name: '赤い月', effect: () => { eventModifiers.enemyDmgMult = 1.5; }, color: 'rgba(255, 0, 0, 0.9)' },
     { time: 180, name: '濃い霧', effect: () => { /* 描画で対応 */ }, color: 'rgba(50, 50, 50, 0.9)' },
@@ -647,22 +656,32 @@ function spawnEnemy(typeOverride, startX, startY) {
 function spawnBoss(name) {
     const bossData = ENEMY_TYPES.find(t => t.name === name);
     if (!bossData) return;
-    
-    enemies.push({ 
-        x: player.x + rnd(100)-50, y: player.y + rnd(100)-50,
-        hp: bossData.hp,
-        maxHp: bossData.hp,
+
+    const angle = rnd(360) * rad(1);
+    const radius = Math.max(canvas.width, canvas.height) / 2 + 100;
+    const bossX = player.x + Math.cos(angle) * radius;
+    const bossY = player.y + Math.sin(angle) * radius;
+
+    const newBoss = {
+        x: bossX, y: bossY, 
+        hp: bossData.hp, maxHp: bossData.hp, 
         speed: bossData.speed, 
-        color: bossData.color, 
-        exp: bossData.exp,
-        type: bossData.type,
         size: bossData.size, 
-        state: 'idle', cd: 0,
-        // ボス専用プロパティ
-        attackPhase: 0, 
-        patternTimer: 0,
-        tempAngle: 0
-    });
+        color: bossData.color, 
+        exp: bossData.exp, 
+        type: bossData.type,
+        typeData: bossData,
+        cd: 0,
+        state: 'move', // move, idle, charge
+        patternTimer: 0, 
+        attackPhase: 0,
+        tempAngle: 0,
+        vx: 0, vy: 0 
+    };
+    enemies.push(newBoss);
+    bossHp = newBoss.hp;
+    bossMaxHp = newBoss.maxHp;
+    bossActive = true;
 }
 
 function fireEnemyBullet(e, isBoss=false, angle=0, type='normal', speedMult=1.0) {
@@ -813,437 +832,437 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-// --- 更新処理 ---
 function update() {
-  
+
   if (freezeTimer > 0) freezeTimer--;
   if (slowEnemyTimer > 0) slowEnemyTimer--;
-  
+
   // 0. イベント '隕石の雨' の処理
   if (currentEvent === '隕石の雨' && frame % 15 === 0) {
-      // プレイヤー周辺に予告円を追加
-      const numMeteors = 3;
-      for (let i = 0; i < numMeteors; i++) {
-          let offsetX = (Math.random() - 0.5) * 600;
-          let offsetY = (Math.random() - 0.5) * 600;
-          
-          meteorWarning.push({ 
-              x: player.x + offsetX, 
-              y: player.y + offsetY, 
-              radius: 50, 
-              timer: 60 
-          });
-      }
+    // プレイヤー周辺に予告円を追加
+    const numMeteors = 3;
+    for (let i = 0; i < numMeteors; i++) {
+      let offsetX = (Math.random() - 0.5) * 600;
+      let offsetY = (Math.random() - 0.5) * 600;
+
+      meteorWarning.push({
+        x: player.x + offsetX,
+        y: player.y + offsetY,
+        radius: 50,
+        timer: 60
+      });
+    }
   }
 
   // 1. 移動 (慣性/スライディング実装)
+  // 慣性移動（スライディング）のロジックが特徴的
   let inputDx = 0, inputDy = 0;
   let moveX = 0, moveY = 0;
-  
-  if (joystick.active) {
-    
-    if (player.isSliding) {
-        inputDx = joystick.cx - joystick.sx;
-        inputDy = joystick.cy - joystick.sy;
-        
-        let angle = Math.atan2(inputDy, inputDx);
-        let dist = Math.min(50, Math.hypot(inputDx, inputDy));
 
-        // 慣性力 (98%) + 入力補正力 (2%) - 氷河の海: 慣性を強化 (0.95 -> 0.98)
-        joystick.dx = joystick.dx * 0.98 + Math.cos(angle) * dist * 0.02;
-        joystick.dy = joystick.dy * 0.98 + Math.sin(angle) * dist * 0.02;
+  if (joystick.active) {
+
+    if (player.isSliding) {
+      inputDx = joystick.cx - joystick.sx;
+      inputDy = joystick.cy - joystick.sy;
+
+      let angle = Math.atan2(inputDy, inputDx);
+      let dist = Math.min(50, Math.hypot(inputDx, inputDy));
+
+      // 慣性力 (SLIDE_INERTIA: 98%) + 入力補正力 (SLIDE_INPUT_CORRECTION: 2%)
+      joystick.dx = joystick.dx * SLIDE_INERTIA + Math.cos(angle) * dist * SLIDE_INPUT_CORRECTION;
+      joystick.dy = joystick.dy * SLIDE_INERTIA + Math.sin(angle) * dist * SLIDE_INPUT_CORRECTION;
 
     } else {
-        joystick.dx = joystick.cx - joystick.sx;
-        joystick.dy = joystick.cy - joystick.sy;
+      joystick.dx = joystick.cx - joystick.sx;
+      joystick.dy = joystick.cy - joystick.sy;
     }
-    
+
     if (joystick.dx !== 0 || joystick.dy !== 0) {
-        player.lastMove.angle = Math.atan2(joystick.dy, joystick.dx);
+      player.lastMove.angle = Math.atan2(joystick.dy, joystick.dx);
     }
   } else if (player.isSliding) {
-      // 慣性のみ: 減速を弱く (強化)
-      joystick.dx *= 0.98; 
-      joystick.dy *= 0.98;
+    // 慣性のみ: 減速を弱く (強化)
+    joystick.dx *= SLIDE_INERTIA;
+    joystick.dy *= SLIDE_INERTIA;
   } else {
-      // 通常停止: 即座に停止
-      joystick.dx = 0;
-      joystick.dy = 0;
+    // 通常停止: 即座に停止
+    joystick.dx = 0;
+    joystick.dy = 0;
   }
 
   let currentSpeed = Math.hypot(joystick.dx, joystick.dy);
-  let maxSpeed = 50; 
+  let maxSpeed = 50;
   if (currentSpeed > maxSpeed) {
-      let ratio = maxSpeed / currentSpeed;
-      joystick.dx *= ratio;
-      joystick.dy *= ratio;
+    let ratio = maxSpeed / currentSpeed;
+    joystick.dx *= ratio;
+    joystick.dy *= ratio;
   }
 
   let finalSpeed = player.speed * (currentSpeed / maxSpeed);
-  
-  let nextX = player.x + joystick.dx/maxSpeed * finalSpeed;
-  let nextY = player.y + joystick.dy/maxSpeed * finalSpeed;
-  
-  player.x = Math.max(-MAP_SIZE/2, Math.min(MAP_SIZE/2, nextX));
-  player.y = Math.max(-MAP_SIZE/2, Math.min(MAP_SIZE/2, nextY));
-  
+
+  let nextX = player.x + joystick.dx / maxSpeed * finalSpeed;
+  let nextY = player.y + joystick.dy / maxSpeed * finalSpeed;
+
+  player.x = Math.max(-MAP_SIZE / 2, Math.min(MAP_SIZE / 2, nextX));
+  player.y = Math.max(-MAP_SIZE / 2, Math.min(MAP_SIZE / 2, nextY));
+
   // 2. 武器の発射制御
   player.weapons.forEach(w => {
     if (w.cd > 0) w.cd--;
     else {
-      fireWeapon(w); 
-      w.cd = getWeaponBaseCD(w.id) * player.cdMult * eventModifiers.cdMult; 
+      fireWeapon(w);
+      w.cd = getWeaponBaseCD(w.id) * player.cdMult * eventModifiers.cdMult;
     }
   });
 
   // 3. 弾の移動 & 寿命 (味方)
   for (let i = bullets.length - 1; i >= 0; i--) {
     let b = bullets[i];
-    
+
     const baseProjSpeed = 7;
-    const projSpeed = baseProjSpeed * player.projSpeedMult; 
+    const projSpeed = baseProjSpeed * player.projSpeedMult;
 
     if (b.type === 'boomerang') {
-        let maxDist = getWeaponRange(11) * player.rangeMult * player.areaMult;
-        let currentDist = Math.hypot(b.x - b.originX, b.y - b.originY);
+      let maxDist = getWeaponRange(11) * player.rangeMult * player.areaMult;
+      let currentDist = Math.hypot(b.x - b.originX, b.y - b.originY);
 
-        if (b.return) {
-            let angle = Math.atan2(player.y - b.y, player.x - b.x);
-            b.vx = Math.cos(angle) * projSpeed;
-            b.vy = Math.sin(angle) * projSpeed;
-        } else if (currentDist > maxDist) {
-            b.return = true;
-        }
+      if (b.return) {
+        let angle = Math.atan2(player.y - b.y, player.x - b.x);
+        b.vx = Math.cos(angle) * projSpeed;
+        b.vy = Math.sin(angle) * projSpeed;
+      } else if (currentDist > maxDist) {
+        b.return = true;
+      }
 
-        b.x += b.vx; b.y += b.vy;
+      b.x += b.vx; b.y += b.vy;
 
-        if (b.return && Math.hypot(b.x - player.x, b.y - player.y) < player.size) {
-            bullets.splice(i, 1);
-            continue;
-        }
+      if (b.return && Math.hypot(b.x - player.x, b.y - player.y) < player.size) {
+        bullets.splice(i, 1);
+        continue;
+      }
 
     }
     else if (b.type === 'drone') {
-        let { enemy: target, dist: targetDist } = getNearestEnemy();
-        b.x = player.x; b.y = player.y;
-        b.cdTimer = b.cdTimer || 0;
-        b.cdTimer++;
+      let { enemy: target, dist: targetDist } = getNearestEnemy();
+      b.x = player.x; b.y = player.y;
+      b.cdTimer = b.cdTimer || 0;
+      b.cdTimer++;
 
-        let droneRange = getWeaponRange(12) * player.rangeMult * player.areaMult;
-        if (target && targetDist < droneRange && b.cdTimer % 30 === 0) {
-            let angle = Math.atan2(target.y - b.y, target.x - b.x);
-            bullets.push({ type: 'normal', x: b.x, y: b.y, vx: Math.cos(angle)*projSpeed, vy: Math.sin(angle)*projSpeed, life: 30, dmg: b.dmg, size: 3, pierce: 1 });
-        }
+      let droneRange = getWeaponRange(12) * player.rangeMult * player.areaMult;
+      if (target && targetDist < droneRange && b.cdTimer % 30 === 0) {
+        let angle = Math.atan2(target.y - b.y, target.x - b.x);
+        bullets.push({ type: 'normal', x: b.x, y: b.y, vx: Math.cos(angle) * projSpeed, vy: Math.sin(angle) * projSpeed, life: 30, dmg: b.dmg, size: 3, pierce: 1 });
+      }
     }
     else if (b.type === 'mine') {
-        if (!b.isTriggered) {
-            enemies.forEach(e => {
-                if (Math.hypot(b.x - e.x, b.y - e.y) < b.size + e.size) {
-                    b.isTriggered = true;
-                    showFloat(b.x, b.y, "MINE!", "orange");
-                    enemies.forEach(other => { 
-                        if(Math.hypot(b.x-other.x, b.y-other.y) < b.explosionSize) takeDamage(other, b.dmg);
-                    });
-                    bullets.splice(i, 1); 
-                }
+      if (!b.isTriggered) {
+        enemies.forEach(e => {
+          if (Math.hypot(b.x - e.x, b.y - e.y) < b.size + e.size) {
+            b.isTriggered = true;
+            showFloat(b.x, b.y, "MINE!", "orange");
+            enemies.forEach(other => {
+              if (Math.hypot(b.x - other.x, b.y - other.y) < b.explosionSize) takeDamage(other, b.dmg);
             });
-        }
+            bullets.splice(i, 1);
+          }
+
+        });
+      }
     }
     else if (b.type === 'sword') {
-        // 剣はプレイヤーに追従
-        b.x = player.x; 
-        b.y = player.y; 
+      // 剣はプレイヤーに追従
+      b.x = player.x;
+      b.y = player.y;
     }
-    else if (b.type === 'bible') { 
-        b.angle += b.speed * 0.01;
-        b.x = player.x + Math.cos(b.angle) * b.radius; 
-        b.y = player.y + Math.sin(b.angle) * b.radius;
-    } 
-    else if (b.type === 'garlic') { 
-      b.x = player.x; b.y = player.y; 
+    else if (b.type === 'bible') {
+      b.angle += b.speed * 0.01;
+      b.x = player.x + Math.cos(b.angle) * b.radius;
+      b.y = player.y + Math.sin(b.angle) * b.radius;
+    }
+    else if (b.type === 'garlic') {
+      b.x = player.x; b.y = player.y;
     }
     else if (b.type !== 'holyWater' && b.type !== 'lightningChain') {
-      b.x += b.vx * player.projSpeedMult; 
+      b.x += b.vx * player.projSpeedMult;
       b.y += b.vy * player.projSpeedMult;
-      
+
       if (b.type === 'axe') { b.vy += 0.3; b.rot = (b.rot || 0) + 0.2; }
-      
+
       if (b.type === 'cross' && b.target) {
         // ターゲットが死んでいたら最も近い敵に切り替え
         if (enemies.includes(b.target)) {
-            let angle = Math.atan2(b.target.y - b.y, b.target.x - b.x);
-            b.vx = Math.cos(angle) * projSpeed * 0.7;
-            b.vy = Math.sin(angle) * projSpeed * 0.7;
+          let angle = Math.atan2(b.target.y - b.y, b.target.x - b.x);
+          b.vx = Math.cos(angle) * projSpeed * 0.7;
+          b.vy = Math.sin(angle) * projSpeed * 0.7;
         } else {
-            let { enemy: newTarget } = getNearestEnemy();
-            b.target = newTarget;
-            if (!newTarget) b.life = 0; // ターゲットがいなければ消滅
+          let { enemy: newTarget } = getNearestEnemy();
+          b.target = newTarget;
+          if (!newTarget) b.life = 0; // ターゲットがいなければ消滅
         }
       }
-    } 
+    }
 
     b.life--;
     if (b.life <= 0) {
-        if(b.type === 'fire' && !b.isExploded) {
-            // 火の玉が寿命を迎えたときに爆発
-            enemies.forEach(e => {
-                if(Math.hypot(b.x-e.x, b.y-e.y) < b.explosionSize) takeDamage(e, b.dmg * 2); 
-            });
-            showFloat(b.x, b.y, "🔥Explode", "red");
-        }
+      if (b.type === 'fire' && !b.isExploded) {
+        // 火の玉が寿命を迎えたときに爆発
+        enemies.forEach(e => {
+          if (Math.hypot(b.x - e.x, b.y - e.y) < b.explosionSize) takeDamage(e, b.dmg * 2);
+        });
+        showFloat(b.x, b.y, "🔥Explode", "red");
+      }
 
-        bullets.splice(i, 1);
+      bullets.splice(i, 1);
     }
   }
-  
+
   // 4. 敵の生成 & 移動
   let enemySpeedMult = 1.0;
   if (freezeTimer > 0) enemySpeedMult = 0;
-  if (slowEnemyTimer > 0) enemySpeedMult *= (2/3); 
+  if (slowEnemyTimer > 0) enemySpeedMult *= (2 / 3);
 
-  let baseSpawnRate = Math.max(minEnemySpawnRate, 60 - Math.floor(gameTime/15));
+  let baseSpawnRate = Math.max(minEnemySpawnRate, 60 - Math.floor(gameTime / 15));
   if (currentEvent === '闇の侵攻') baseSpawnRate /= 2;
 
   if (enemySpeedMult > 0) {
     if (!bossActive && gameTime < 420) {
-        if (frame % baseSpawnRate === 0) spawnEnemy();
-    } 
-    
+      if (frame % baseSpawnRate === 0) spawnEnemy();
+    }
+
     enemies.forEach(e => {
-        let dist = Math.hypot(player.x - e.x, player.y - e.y);
-        let angle = Math.atan2(player.y - e.y, player.x - e.x);
+      let dist = Math.hypot(player.x - e.x, player.y - e.y);
+      let angle = Math.atan2(player.y - e.y, player.x - e.x);
+      e.cd = e.cd || 0;
+      e.cd++;
+
+      let moveSpeed = e.speed * enemySpeedMult;
+
+      // ★ ボスの特殊処理 (複雑な攻撃パターン管理)
+      if (e.type.includes('Boss') || e.name === 'Reaper') {
+        bossHp = e.hp; bossMaxHp = e.maxHp;
         e.cd = e.cd || 0;
         e.cd++;
-        
-        let moveSpeed = e.speed * enemySpeedMult;
+        e.patternTimer = e.patternTimer || 0;
+        e.attackPhase = e.attackPhase || 0;
+        e.tempAngle = e.tempAngle || 0;
 
-        // ★ ボスの特殊処理
-        if (e.type.includes('Boss') || e.name === 'Reaper') {
-            bossHp = e.hp; bossMaxHp = e.maxHp;
-            e.cd = e.cd || 0;
-            e.cd++;
-            e.patternTimer = e.patternTimer || 0;
-            e.attackPhase = e.attackPhase || 0;
-            e.tempAngle = e.tempAngle || 0;
-            
-            // Reaper (即死ボス)
-            if (e.name === 'Reaper') {
-                e.x += Math.cos(angle) * moveSpeed;
-                e.y += Math.sin(angle) * moveSpeed;
-                if (dist < player.size + e.size) gameOver(); // 接触で即死
-                return;
-            }
-
-            
-            // --- BulletQueenBoss 専用ロジック ---
-            if (e.type === 'BulletQueenBoss') {
-                e.patternTimer++;
-                // (前回のロジックをそのまま適用 - 複雑な弾幕パターン)
-                if (e.attackPhase === 0) { // 接近フェーズ
-                    e.x += Math.cos(angle) * moveSpeed;
-                    e.y += Math.sin(angle) * moveSpeed;
-                    if (dist < 400 || e.patternTimer > 180) {
-                        e.attackPhase = rnd(4) + 1; // 1-4のランダムな攻撃に移行
-                        e.patternTimer = 0;
-                        e.tempAngle = Math.random() * Math.PI * 2; 
-                    }
-                } 
-                else if (e.attackPhase === 1) { // 拡散弾フェーズ (360度ランダム射撃)
-                    e.x += Math.cos(angle) * moveSpeed * 0.1; 
-                    if (e.patternTimer % 5 === 0 && e.patternTimer < 120) {
-                        const numBullets = 8;
-                        for(let i=0; i<numBullets; i++) {
-                            let randomAngle = Math.random() * Math.PI * 2;
-                            fireEnemyBullet(e, true, randomAngle);
-                        }
-                    } else if (e.patternTimer >= 180) {
-                        e.attackPhase = 0;
-                        e.patternTimer = 0;
-                    }
-                } 
-                else if (e.attackPhase === 2) { // 扇状弾フェーズ (プレイヤー狙い)
-                    e.x += Math.cos(angle) * moveSpeed * 0.1; 
-                    if (e.patternTimer % 30 === 0 && e.patternTimer < 180) {
-                        const numFan = 5;
-                        const spread = rad(30);
-                        for(let i=0; i<numFan; i++) {
-                            let fanAngle = angle + (i - (numFan-1)/2) * (spread / (numFan-1));
-                            fireEnemyBullet(e, true, fanAngle);
-                        }
-                    } else if (e.patternTimer >= 240) {
-                        e.attackPhase = 0; 
-                        e.patternTimer = 0;
-                    }
-                }
-                else if (e.attackPhase === 3) { // ランダム連続弾
-                    if (e.patternTimer < 180 && e.patternTimer % 3 === 0) {
-                         const randomDir = Math.random() * Math.PI * 2;
-                         fireEnemyBullet(e, true, randomDir, 'normal', 1.5); 
-                    } else if (e.patternTimer >= 240) {
-                        e.attackPhase = 0; 
-                        e.patternTimer = 0;
-                    }
-                }
-                else if (e.attackPhase === 4) { // 追尾弾＋ザコ召喚
-                    if (e.patternTimer === 1) { // 召喚
-                        for(let i=0; i<4; i++) {
-                            let spawnAngle = (Math.PI*2/4)*i;
-                            spawnEnemy('Bat', e.x + Math.cos(spawnAngle)*e.size*2, e.y + Math.sin(spawnAngle)*e.size*2);
-                        }
-                        showFloat(e.x, e.y, "Minion Summon!", "yellow");
-                    }
-                    if (e.patternTimer % 45 === 0 && e.patternTimer < 180) { // 追尾弾
-                        fireEnemyBullet(e, true, angle, 'homing', 0.5); 
-                        fireEnemyBullet(e, true, angle + rad(15), 'homing', 0.5); 
-                        fireEnemyBullet(e, true, angle - rad(15), 'homing', 0.5); 
-                    } else if (e.patternTimer >= 240) {
-                        e.attackPhase = 0; 
-                        e.patternTimer = 0;
-                    }
-                }
-            } 
-            
-            // --- TeleportHunterBoss 専用ロジック ---
-            else if (e.type === 'TeleportHunterBoss') {
-                e.patternTimer++;
-                if (e.patternTimer < 60) {
-                    // 予備動作 (移動)
-                    e.x += Math.cos(angle) * moveSpeed * 0.5;
-                    e.y += Math.sin(angle) * moveSpeed * 0.5;
-                } else if (e.patternTimer === 60) {
-                    // テレポート
-                    let newX = player.x + (Math.random() - 0.5) * 200;
-                    let newY = player.y + (Math.random() - 0.5) * 200;
-                    e.x = newX;
-                    e.y = newY;
-                    showFloat(e.x, e.y, "Teleport!", "cyan");
-                } else if (e.patternTimer > 60 && e.patternTimer < 180 && e.patternTimer % 10 === 0) {
-                    // 乱射
-                    const numShots = 5;
-                    for (let i = 0; i < numShots; i++) {
-                        let randomAngle = angle + (Math.random() - 0.5) * rad(90);
-                        fireEnemyBullet(e, true, randomAngle, 'normal', 1.2);
-                    }
-                } else if (e.patternTimer > 240) {
-                    e.patternTimer = 0; // リセット
-                }
-            } 
-            
-            // --- ArcMageBoss 専用ロジック ---
-            else if (e.type === 'ArcMageBoss') {
-                e.patternTimer++;
-                if (e.patternTimer < 120) {
-                    // プレイヤーを狙った大弾
-                    if (e.patternTimer % 60 === 0) {
-                        fireEnemyBullet(e, true, angle, 'big', 0.5); // 速度遅め、サイズ大きめ
-                    }
-                } else if (e.patternTimer >= 120 && e.patternTimer < 360) {
-                    // 回転する弾幕
-                    if (e.patternTimer % 10 === 0) {
-                        e.tempAngle += rad(5); // 回転
-                        for (let i = 0; i < 4; i++) {
-                            fireEnemyBullet(e, true, e.tempAngle + (Math.PI / 2) * i);
-                        }
-                    }
-                } else if (e.patternTimer > 360) {
-                    e.patternTimer = 0;
-                    e.tempAngle = 0;
-                }
-            }
-
-            return; 
-        } 
-        
-        // 特殊な敵の動作
-        if (e.type === 'shooter' || e.type === 'mage') {
-            const SHOOT_RANGE = 300;
-            const PADDING = 50; 
-
-            if (dist > SHOOT_RANGE) {
-                e.x += Math.cos(angle) * moveSpeed;
-                e.y += Math.sin(angle) * moveSpeed;
-                e.state = 'move';
-            } else if (dist < SHOOT_RANGE - PADDING) {
-                let awayAngle = angle + Math.PI;
-                e.x += Math.cos(awayAngle) * moveSpeed * 0.5; 
-                e.y += Math.sin(awayAngle) * moveSpeed * 0.5;
-                e.state = 'retreat';
-            } else {
-                e.state = 'idle';
-                let shootCD = e.type === 'shooter' ? 90 : 60;
-                if (e.cd % shootCD === 0) { fireEnemyBullet(e); }
-            }
-            return; 
-        }
-        
-        if (e.type === 'charger') {
-            const CHARGE_DELAY = 90;
-            const CHARGE_SPEED = moveSpeed * 4;
-
-            if (e.state === 'move' && e.cd > CHARGE_DELAY) {
-                e.chargeAngle = angle;
-                e.state = 'charge';
-                e.cd = 0;
-            } else if (e.state === 'charge' && e.cd < 60) {
-                e.x += Math.cos(e.chargeAngle) * CHARGE_SPEED;
-                e.y += Math.sin(e.chargeAngle) * CHARGE_SPEED;
-            } else if (e.state === 'charge' && e.cd >= 60) {
-                e.state = 'move';
-                e.cd = 0;
-            } else {
-                e.x += Math.cos(angle) * moveSpeed;
-                e.y += Math.sin(angle) * moveSpeed;
-            }
-            return;
+        // Reaper (即死ボス)
+        if (e.name === 'Reaper') {
+          e.x += Math.cos(angle) * moveSpeed;
+          e.y += Math.sin(angle) * moveSpeed;
+          if (dist < player.size + e.size) gameOver(); // 接触で即死
+          return;
         }
 
-        // --- 通常敵の動き (normal, exploder, splitter) ---
-        e.x += Math.cos(angle) * moveSpeed;
-        e.y += Math.sin(angle) * moveSpeed;
-        
-        // プレイヤーとの接触ダメージ
-        if (dist < player.size + e.size) {
-            if (frame % 30 === 0) {
-                takePlayerDamage(10 * eventModifiers.enemyDmgMult);
+
+        // --- BulletQueenBoss 専用ロジック ---
+        if (e.type === 'BulletQueenBoss') {
+          e.patternTimer++;
+          if (e.attackPhase === 0) { // 接近フェーズ
+            e.x += Math.cos(angle) * moveSpeed;
+            e.y += Math.sin(angle) * moveSpeed;
+            if (dist < 400 || e.patternTimer > 180) {
+              e.attackPhase = rnd(4) + 1; // 1-4のランダムな攻撃に移行
+              e.patternTimer = 0;
+              e.tempAngle = Math.random() * Math.PI * 2;
             }
+          }
+          else if (e.attackPhase === 1) { // 拡散弾フェーズ (360度ランダム射撃)
+            e.x += Math.cos(angle) * moveSpeed * 0.1;
+            if (e.patternTimer % 5 === 0 && e.patternTimer < 120) {
+              const numBullets = 8;
+              for (let i = 0; i < numBullets; i++) {
+                let randomAngle = Math.random() * Math.PI * 2;
+                fireEnemyBullet(e, true, randomAngle);
+              }
+            } else if (e.patternTimer >= 180) {
+              e.attackPhase = 0;
+              e.patternTimer = 0;
+            }
+          }
+          else if (e.attackPhase === 2) { // 扇状弾フェーズ (プレイヤー狙い)
+            e.x += Math.cos(angle) * moveSpeed * 0.1;
+            if (e.patternTimer % 30 === 0 && e.patternTimer < 180) {
+              const numFan = 5;
+              const spread = rad(30);
+              for (let i = 0; i < numFan; i++) {
+                let fanAngle = angle + (i - (numFan - 1) / 2) * (spread / (numFan - 1));
+                fireEnemyBullet(e, true, fanAngle);
+              }
+            } else if (e.patternTimer >= 240) {
+              e.attackPhase = 0;
+              e.patternTimer = 0;
+            }
+          }
+          else if (e.attackPhase === 3) { // ランダム連続弾
+            if (e.patternTimer < 180 && e.patternTimer % 3 === 0) {
+              const randomDir = Math.random() * Math.PI * 2;
+              fireEnemyBullet(e, true, randomDir, 'normal', 1.5);
+            } else if (e.patternTimer >= 240) {
+              e.attackPhase = 0;
+              e.patternTimer = 0;
+            }
+          }
+          else if (e.attackPhase === 4) { // 追尾弾＋ザコ召喚
+            if (e.patternTimer === 1) { // 召喚
+              for (let i = 0; i < 4; i++) {
+                let spawnAngle = (Math.PI * 2 / 4) * i;
+                spawnEnemy('Bat', e.x + Math.cos(spawnAngle) * e.size * 2, e.y + Math.sin(spawnAngle) * e.size * 2);
+              }
+              showFloat(e.x, e.y, "Minion Summon!", "yellow");
+            }
+            if (e.patternTimer % 45 === 0 && e.patternTimer < 180) { // 追尾弾
+              fireEnemyBullet(e, true, angle, 'homing', 0.5);
+              fireEnemyBullet(e, true, angle + rad(15), 'homing', 0.5);
+              fireEnemyBullet(e, true, angle - rad(15), 'homing', 0.5);
+            } else if (e.patternTimer >= 240) {
+              e.attackPhase = 0;
+              e.patternTimer = 0;
+            }
+          }
         }
+
+        // --- TeleportHunterBoss 専用ロジック ---
+        else if (e.type === 'TeleportHunterBoss') {
+          e.patternTimer++;
+          if (e.patternTimer < 60) {
+            // 予備動作 (移動)
+            e.x += Math.cos(angle) * moveSpeed * 0.5;
+            e.y += Math.sin(angle) * moveSpeed * 0.5;
+          } else if (e.patternTimer === 60) {
+            // テレポート
+            let newX = player.x + (Math.random() - 0.5) * 200;
+            let newY = player.y + (Math.random() - 0.5) * 200;
+            e.x = newX;
+            e.y = newY;
+            showFloat(e.x, e.y, "Teleport!", "cyan");
+          } else if (e.patternTimer > 60 && e.patternTimer < 180 && e.patternTimer % 10 === 0) {
+            // 乱射
+            const numShots = 5;
+            for (let i = 0; i < numShots; i++) {
+              let randomAngle = angle + (Math.random() - 0.5) * rad(90);
+              fireEnemyBullet(e, true, randomAngle, 'normal', 1.2);
+            }
+          } else if (e.patternTimer > 240) {
+            e.patternTimer = 0; // リセット
+          }
+        }
+
+        // --- ArcMageBoss 専用ロジック ---
+        else if (e.type === 'ArcMageBoss') {
+          e.patternTimer++;
+          if (e.patternTimer < 120) {
+            // プレイヤーを狙った大弾
+            if (e.patternTimer % 60 === 0) {
+              fireEnemyBullet(e, true, angle, 'big', 0.5); // 速度遅め、サイズ大きめ
+            }
+          } else if (e.patternTimer >= 120 && e.patternTimer < 360) {
+            // 回転する弾幕
+            if (e.patternTimer % 10 === 0) {
+              e.tempAngle += rad(5); // 回転
+              for (let i = 0; i < 4; i++) {
+                fireEnemyBullet(e, true, e.tempAngle + (Math.PI / 2) * i);
+              }
+            }
+          } else if (e.patternTimer > 360) {
+            e.patternTimer = 0;
+            e.tempAngle = 0;
+          }
+        }
+
+        return;
+      }
+
+      // 特殊な敵の動作
+      if (e.type === 'shooter' || e.type === 'mage') {
+        const SHOOT_RANGE = 300;
+        const PADDING = 50;
+
+        if (dist > SHOOT_RANGE) {
+          e.x += Math.cos(angle) * moveSpeed;
+          e.y += Math.sin(angle) * moveSpeed;
+          e.state = 'move';
+        } else if (dist < SHOOT_RANGE - PADDING) {
+          let awayAngle = angle + Math.PI;
+          e.x += Math.cos(awayAngle) * moveSpeed * 0.5;
+          e.y += Math.sin(awayAngle) * moveSpeed * 0.5;
+          e.state = 'retreat';
+        } else {
+          e.state = 'idle';
+          let shootCD = e.type === 'shooter' ? 90 : 60;
+          if (e.cd % shootCD === 0) { fireEnemyBullet(e); }
+        }
+        return;
+      }
+
+      if (e.type === 'charger') {
+        const CHARGE_DELAY = 90;
+        const CHARGE_SPEED = moveSpeed * 4;
+
+        if (e.state === 'move' && e.cd > CHARGE_DELAY) {
+          e.chargeAngle = angle;
+          e.state = 'charge';
+          e.cd = 0;
+        } else if (e.state === 'charge' && e.cd < 60) {
+          e.x += Math.cos(e.chargeAngle) * CHARGE_SPEED;
+          e.y += Math.sin(e.chargeAngle) * CHARGE_SPEED;
+        } else if (e.state === 'charge' && e.cd >= 60) {
+          e.state = 'move';
+          e.cd = 0;
+        } else {
+          e.x += Math.cos(angle) * moveSpeed;
+          e.y += Math.sin(angle) * moveSpeed;
+        }
+        return;
+      }
+
+      // --- 通常敵の動き (normal, exploder, splitter) ---
+      e.x += Math.cos(angle) * moveSpeed;
+      e.y += Math.sin(angle) * moveSpeed;
+
+      // プレイヤーとの接触ダメージ
+      if (dist < player.size + e.size) {
+        if (frame % 30 === 0) {
+          takePlayerDamage(10 * eventModifiers.enemyDmgMult);
+        }
+      }
     });
   }
-  
+
   // 4.5. 敵弾の移動と判定
-  for(let i = enemyBullets.length - 1; i >= 0; i--) {
+  for (let i = enemyBullets.length - 1; i >= 0; i--) {
     let eb = enemyBullets[i];
-    
+
     if (eb.type === 'homing') {
-        // 追尾ロジック
-        let angle = Math.atan2(player.y - eb.y, player.x - eb.x);
-        let speed = Math.hypot(eb.vx, eb.vy);
-        
-        let currentAngle = Math.atan2(eb.vy, eb.vx);
-        let diff = angle - currentAngle;
-        if (diff > Math.PI) diff -= Math.PI * 2;
-        if (diff < -Math.PI) diff += Math.PI * 2;
+      // 追尾ロジック
+      let angle = Math.atan2(player.y - eb.y, player.x - eb.x);
+      let speed = Math.hypot(eb.vx, eb.vy);
 
-        let turnRate = 0.05; 
-        currentAngle += Math.min(Math.max(diff, -turnRate), turnRate);
+      let currentAngle = Math.atan2(eb.vy, eb.vx);
+      let diff = angle - currentAngle;
+      if (diff > Math.PI) diff -= Math.PI * 2;
+      if (diff < -Math.PI) diff += Math.PI * 2;
 
-        eb.vx = Math.cos(currentAngle) * speed;
-        eb.vy = Math.sin(currentAngle) * speed;
+      let turnRate = 0.05;
+      currentAngle += Math.min(Math.max(diff, -turnRate), turnRate);
+
+      eb.vx = Math.cos(currentAngle) * speed;
+      eb.vy = Math.sin(currentAngle) * speed;
     }
-    
+
     eb.x += eb.vx;
     eb.y += eb.vy;
     eb.life--;
 
     let dist = Math.hypot(eb.x - player.x, eb.y - player.y);
     if (dist < eb.size + player.size) {
-        takePlayerDamage(eb.dmg || 5);
-        enemyBullets.splice(i, 1);
-        continue;
+      takePlayerDamage(eb.dmg || 5);
+      enemyBullets.splice(i, 1);
+      continue;
     }
 
     if (eb.life <= 0) {
-        enemyBullets.splice(i, 1);
+      enemyBullets.splice(i, 1);
     }
   }
 
@@ -1251,49 +1270,49 @@ function update() {
   const garlicBullet = bullets.find(b => b.type === 'garlic');
   const holyWaterBullets = bullets.filter(b => b.type === 'holyWater');
 
-  if (garlicBullet && frame % 10 === 0) { 
-      enemies.forEach(e => {
-          let dist = Math.hypot(garlicBullet.x - e.x, garlicBullet.y - e.y);
-          if (dist < garlicBullet.size + e.size) {
-              takeDamage(e, garlicBullet.dmg * 0.16); 
-          }
-      });
+  if (garlicBullet && frame % 10 === 0) {
+    enemies.forEach(e => {
+      let dist = Math.hypot(garlicBullet.x - e.x, garlicBullet.y - e.y);
+      if (dist < garlicBullet.size + e.size) {
+        takeDamage(e, garlicBullet.dmg * 0.16);
+      }
+    });
   }
 
-  if (holyWaterBullets.length > 0 && frame % 15 === 0) { 
-      holyWaterBullets.forEach(b => {
-          enemies.forEach(e => {
-              let dist = Math.hypot(b.x - e.x, b.y - e.y);
-              if (dist < b.size + e.size) {
-                  if (!b.lastHit.has(e) || frame - b.lastHit.get(e) > 30) {
-                      takeDamage(e, b.dmg); 
-                      b.lastHit.set(e, frame);
-                  }
-              }
-          });
+  if (holyWaterBullets.length > 0 && frame % 15 === 0) {
+    holyWaterBullets.forEach(b => {
+      enemies.forEach(e => {
+        let dist = Math.hypot(b.x - e.x, b.y - e.y);
+        if (dist < b.size + e.size) {
+          if (!b.lastHit.has(e) || frame - b.lastHit.get(e) > 30) {
+            takeDamage(e, b.dmg);
+            b.lastHit.set(e, frame);
+          }
+        }
       });
+    });
   }
-  
+
   // 4.8. 隕石の着弾処理
   for (let i = meteorWarning.length - 1; i >= 0; i--) {
-      let m = meteorWarning[i];
-      m.timer--;
+    let m = meteorWarning[i];
+    m.timer--;
 
-      if (m.timer <= 0) {
-          // 隕石着弾！
-          enemies.forEach(e => {
-              let dist = Math.hypot(m.x - e.x, m.y - e.y);
-              if (dist < m.radius * 2) { // 範囲拡大
-                  takeDamage(e, 50 * player.dmgMult); 
-              }
-          });
-          let playerDist = Math.hypot(m.x - player.x, m.y - player.y);
-          if (playerDist < m.radius) {
-              takePlayerDamage(20);
-          }
-          showFloat(m.x, m.y, "METEOR!", "red");
-          meteorWarning.splice(i, 1);
+    if (m.timer <= 0) {
+      // 隕石着弾！
+      enemies.forEach(e => {
+        let dist = Math.hypot(m.x - e.x, m.y - e.y);
+        if (dist < m.radius * 2) { // 範囲拡大
+          takeDamage(e, 50 * player.dmgMult);
+        }
+      });
+      let playerDist = Math.hypot(m.x - player.x, m.y - player.y);
+      if (playerDist < m.radius) {
+        takePlayerDamage(20);
       }
+      showFloat(m.x, m.y, "METEOR!", "red");
+      meteorWarning.splice(i, 1);
+    }
   }
 
 
@@ -1301,76 +1320,76 @@ function update() {
   for (let i = bullets.length - 1; i >= 0; i--) {
     let b = bullets[i];
     let hit = false;
-    
+
     // 常時効果の弾はスキップ
-    if (b.type === 'garlic' || b.type === 'holyWater' || b.type === 'mine' || b.type === 'drone' || b.type === 'lightningChain') continue; 
-    
+    if (b.type === 'garlic' || b.type === 'holyWater' || b.type === 'mine' || b.type === 'drone' || b.type === 'lightningChain') continue;
+
     for (let j = enemies.length - 1; j >= 0; j--) {
       let e = enemies[j];
       let dist = Math.hypot(b.x - e.x, b.y - e.y);
-      
+
       // 共通のヒット判定
       if (dist < b.size + e.size || b.type === 'sword') {
-        
+
         if (b.type === 'sword') {
-             // 剣の当たり判定: 扇形の範囲内判定
-             let dx = e.x - b.x;
-             let dy = e.y - b.y;
-             let enemyAngle = Math.atan2(dy, dx);
-             
-             let startAngle = b.angle - rad(20); 
-             let endAngle = b.angle + rad(20); 
-             
-             // 角度の正規化 (複雑な角度処理を回避するため、ここでは簡易判定)
-             let isNearAngle = Math.abs(enemyAngle - b.angle) < rad(30); 
-             
-             if (Math.hypot(dx, dy) < b.size + e.size && isNearAngle) {
-                 if (b.hitEnemies.has(e)) continue; 
+          // 剣の当たり判定: 扇形の範囲内判定
+          let dx = e.x - b.x;
+          let dy = e.y - b.y;
+          let enemyAngle = Math.atan2(dy, dx);
 
-                 takeDamage(e, b.dmg);
-                 b.hitEnemies.add(e);
-             }
-             continue; 
+          let startAngle = b.angle - rad(20);
+          let endAngle = b.angle + rad(20);
+
+          // 角度の正規化 (複雑な角度処理を回避するため、ここでは簡易判定)
+          let isNearAngle = Math.abs(enemyAngle - b.angle) < rad(30);
+
+          if (Math.hypot(dx, dy) < b.size + e.size && isNearAngle) {
+            if (b.hitEnemies.has(e)) continue;
+
+            takeDamage(e, b.dmg);
+            b.hitEnemies.add(e);
+          }
+          continue;
         }
-        
-        if(b.type === 'bible') {
-            if (b.lastHit.has(e) && frame - b.lastHit.get(e) < 10) continue; 
-            b.lastHit.set(e, frame);
+
+        if (b.type === 'bible') {
+          if (b.lastHit.has(e) && frame - b.lastHit.get(e) < 10) continue;
+          b.lastHit.set(e, frame);
         }
-        
-        if(b.type === 'icicle') {
-            if (b.lastHit.has(e) && frame - b.lastHit.get(e) < 5) continue; 
-            b.lastHit.set(e, frame);
 
-            b.pierce--; 
-            if (b.pierce >= 0) {
-                const baseProjSpeed = 7;
-                const projSpeed = baseProjSpeed * player.projSpeedMult; 
+        if (b.type === 'icicle') {
+          if (b.lastHit.has(e) && frame - b.lastHit.get(e) < 5) continue;
+          b.lastHit.set(e, frame);
 
-                const nextTarget = enemies.find(other => other !== e && !b.lastHit.has(other));
-                if (nextTarget) {
-                    let angle = Math.atan2(nextTarget.y - b.y, nextTarget.x - b.x);
-                    b.vx = Math.cos(angle) * projSpeed;
-                    b.vy = Math.sin(angle) * projSpeed;
-                    b.reflectionCount++;
-                } else {
-                    b.pierce = 0; 
-                }
+          b.pierce--;
+          if (b.pierce >= 0) {
+            const baseProjSpeed = 7;
+            const projSpeed = baseProjSpeed * player.projSpeedMult;
+
+            const nextTarget = enemies.find(other => other !== e && !b.lastHit.has(other));
+            if (nextTarget) {
+              let angle = Math.atan2(nextTarget.y - b.y, nextTarget.x - b.x);
+              b.vx = Math.cos(angle) * projSpeed;
+              b.vy = Math.sin(angle) * projSpeed;
+              b.reflectionCount++;
+            } else {
+              b.pierce = 0;
             }
+          }
         }
 
         takeDamage(e, b.dmg);
         b.pierce = (b.pierce || 1) - 1;
-        
-        if (b.pierce <= 0) { 
-            hit = true; 
-            break; 
+
+        if (b.pierce <= 0) {
+          hit = true;
+          break;
         }
       }
     }
-    
-    if (hit && b.type !== 'axe' && b.type !== 'cross' && b.type !== 'bible' && b.type !== 'boomerang' && b.type !== 'icicle') { 
-        bullets.splice(i, 1);
+
+    if (hit && b.type !== 'axe' && b.type !== 'cross' && b.type !== 'bible' && b.type !== 'boomerang' && b.type !== 'icicle') {
+      bullets.splice(i, 1);
     }
   }
 
@@ -1380,17 +1399,17 @@ function update() {
     let dist = Math.hypot(it.x - player.x, it.y - player.y);
 
     let isVisible = getScreenX(it.x) > -500 && getScreenX(it.x) < canvas.width + 500 &&
-                    getScreenY(it.y) > -500 && getScreenY(it.y) < canvas.height + 500;
-    
-    let isMagnetized = dist < player.magnet || !isVisible; 
+      getScreenY(it.y) > -500 && getScreenY(it.y) < canvas.height + 500;
 
-    if (isMagnetized) { 
+    let isMagnetized = dist < player.magnet || !isVisible;
+
+    if (isMagnetized) {
       let angle = Math.atan2(player.y - it.y, player.x - it.x);
       it.x += Math.cos(angle) * 8;
       it.y += Math.sin(angle) * 8;
     }
 
-    if (dist < player.size + 5) { 
+    if (dist < player.size + 5) {
       if (it.kind === 'exp') {
         player.exp += it.val * eventModifiers.expMult;
         checkLevelUp();
@@ -1402,23 +1421,22 @@ function update() {
   }
 
   // 7. 定期回復と時間更新 & イベント処理
-  if(frame % 60 === 0) {
-      gameTime++;
-      updateHUD(); 
-      
-      if (player.regen > 0) player.hp = Math.min(player.maxHp, player.hp + player.regen);
+  if (frame % 60 === 0) {
+    gameTime++;
+    updateHUD();
+
+    if (player.regen > 0) player.hp = Math.min(player.maxHp, player.hp + player.regen);
   }
-  
+
   // 8. フローティングテキストの更新 (変更なし)
   for (let i = floaters.length - 1; i >= 0; i--) {
-      floaters[i].life--;
-      floaters[i].y -= 1;
-      if (floaters[i].life <= 0) floaters.splice(i, 1);
+    floaters[i].life--;
+    floaters[i].y -= 1;
+    if (floaters[i].life <= 0) floaters.splice(i, 1);
   }
 
   frame++;
 }
-
 // --- 描画処理 (プレイヤー描画強化、ニンニク初期オーラ描画抑止) ---
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);

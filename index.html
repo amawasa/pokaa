@@ -463,12 +463,24 @@ function fireWeapon(w) {
             }
         }
         break;
-    case 2: // 斧 (Axe)
-        if(target) {
-            let angle = Math.atan2(target.y - player.y, target.x - player.x) + rad(30) + rnd(30);
-            bullets.push({ type: 'axe', x: player.x, y: player.y, vx: Math.cos(angle)*projSpeed*0.8, vy: Math.sin(angle)*projSpeed*0.8, life: 60, dmg: dmg*1.5, size: 8 * player.areaMult, pierce: 2, rot: 0 });
-        }
+case 2: { // 斧 (Axe)
+        // ★ 進行方向へ発射し、放物線（重力）を加える
+        const currentMoveAngle = getDir(); 
+        const initialSpeed = projSpeed * 1.5;
+        const gravityDirection = (Math.random() < 0.5 ? 1 : -1);
+        
+        bullets.push({ 
+            type: 'axe', 
+            x: player.x, y: player.y, 
+            vx: Math.cos(currentMoveAngle) * initialSpeed, 
+            vy: Math.sin(currentMoveAngle) * initialSpeed, 
+            life: 60, dmg: dmg * 1.5, 
+            size: 16 * player.areaMult, // ★ サイズを2倍 (8 -> 16)
+            pierce: 2, rot: 0,
+            gravity: gravityDirection * (0.1 + 0.1 * Math.random()) // ランダムな上下加速度
+        });
         break;
+    }
     case 3: // 十字架 (Cross)
         if(target) {
             let angle = Math.atan2(target.y - player.y, target.x - player.x);

@@ -235,6 +235,7 @@ const GAME_EVENTS = [
     { time: 180, name: '濃い霧', effect: () => { /* 描画で対応 */ }, color: 'rgba(50, 50, 50, 0.9)' },
     { time: 240, name: '隕石の雨', effect: () => { /* updateで対応 */ }, color: 'rgba(150, 50, 0, 0.9)' },
     { time: 300, name: '氷河の海', effect: () => { player.isSliding = true; }, color: 'rgba(0, 100, 255, 0.9)' },
+      { time: 359, name: '氷河の海', effect: () => { player.isSliding = true; }, color: 'rgba(0, 0, 0, 0)' },
     { time: 360, name: '鉛の雨', effect: () => { /* スポーンで対応 */ }, color: 'rgba(100, 100, 100, 0.9)' },
     { time: 420, name: '開戦', effect: () => { enemies = []; spawnBoss('BulletQueen'); bossActive = true; }, color: 'rgba(255, 100, 100, 0.9)' },
     { time: 500, name: '四面楚歌', effect: () => { spawnAmbush(100); }, color: 'rgba(50, 50, 50, 0.9)' },
@@ -1070,6 +1071,8 @@ function update() {
         // --- BulletQueenBoss 専用ロジック ---
         if (e.type === 'BulletQueenBoss') {
           e.patternTimer++;
+            let newX = player.x + (Math.random() - 0.5) * 1000;
+            let newY = player.y + (Math.random() - 0.5) * 1000;
           if (e.attackPhase === 0) { // 接近フェーズ
             e.x += Math.cos(angle) * moveSpeed;
             e.y += Math.sin(angle) * moveSpeed;
@@ -1137,14 +1140,15 @@ function update() {
         // --- TeleportHunterBoss 専用ロジック ---
         else if (e.type === 'TeleportHunterBoss') {
           e.patternTimer++;
+          
           if (e.patternTimer < 60) {
             // 予備動作 (移動)
             e.x += Math.cos(angle) * moveSpeed * 0.5;
             e.y += Math.sin(angle) * moveSpeed * 0.5;
           } else if (e.patternTimer === 60) {
             // テレポート
-            let newX = player.x + (Math.random() - 0.5) * 200;
-            let newY = player.y + (Math.random() - 0.5) * 200;
+            let newX = player.x + (Math.random() - 0.5) * 1000;
+            let newY = player.y + (Math.random() - 0.5) * 1000;
             e.x = newX;
             e.y = newY;
             showFloat(e.x, e.y, "Teleport!", "cyan");

@@ -235,7 +235,7 @@ const GAME_EVENTS = [
     { time: 180, name: '濃い霧', effect: () => { /* 描画で対応 */ }, color: 'rgba(50, 50, 50, 0.9)' },
     { time: 240, name: '隕石の雨', effect: () => { /* updateで対応 */ }, color: 'rgba(150, 50, 0, 0.9)' },
     { time: 300, name: '氷河の海', effect: () => { player.isSliding = true; }, color: 'rgba(0, 100, 255, 0.9)' },
-      { time: 359, name: '氷河の海', effect: () => { player.isSliding = true; }, color: 'rgba(0, 0, 0, 0)' },
+      { time: 359, name: '氷河の海', effect: () => { player.isSliding = false; }, color: 'rgba(0, 0, 0, 0)' },
     { time: 360, name: '鉛の雨', effect: () => { /* スポーンで対応 */ }, color: 'rgba(100, 100, 100, 0.9)' },
     { time: 420, name: '開戦', effect: () => { enemies = []; spawnBoss('BulletQueen'); bossActive = true; }, color: 'rgba(255, 100, 100, 0.9)' },
     { time: 500, name: '四面楚歌', effect: () => { spawnAmbush(100); }, color: 'rgba(50, 50, 50, 0.9)' },

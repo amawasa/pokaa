@@ -1154,7 +1154,7 @@ function update() {
             showFloat(e.x, e.y, "Teleport!", "cyan");
           } else if (e.patternTimer > 60 && e.patternTimer < 180 && e.patternTimer % 10 === 0) {
             // 乱射
-            const numShots = 5;
+            const numShots = 3;
             for (let i = 0; i < numShots; i++) {
               let randomAngle = angle + (Math.random() - 0.5) * rad(90);
               fireEnemyBullet(e, true, randomAngle, 'normal', 1.2);

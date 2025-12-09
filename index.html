@@ -486,7 +486,7 @@ case 2: { // 斧 (Axe)
         if(target) {
             let angle = Math.atan2(target.y - player.y, target.x - player.x);
             let crossSpeed = projSpeed * 0.7;
-            bullets.push({ type: 'cross', x: player.x, y: player.y, vx: Math.cos(angle)*crossSpeed, vy: Math.sin(angle)*crossSpeed, life: 80, dmg: dmg*1.2, size: 6, pierce: 99, target: target });
+            bullets.push({ type: 'cross', x: player.x, y: player.y, vx: Math.cos(angle)*crossSpeed, vy: Math.sin(angle)*crossSpeed, life: 80, dmg: dmg*0.6, size: 6, pierce: 99, target: target });
         }
         break;
     case 4: // ニンニク (Garlic)
@@ -494,7 +494,7 @@ case 2: { // 斧 (Axe)
         // ここではまだニンニク弾が存在しない場合のみ生成する。
         if (!bullets.some(b => b.type === 'garlic')) {
             let garlicSize = 50 + w.lv * 15 * player.areaMult;
-            bullets.push({ type: 'garlic', x: player.x, y: player.y, dmg: dmg*2, size: garlicSize, life: Infinity, pierce: 99 });
+            bullets.push({ type: 'garlic', x: player.x, y: player.y, dmg: dmg*5, size: garlicSize, life: Infinity, pierce: 99 });
         } else {
              // すでに存在する場合は範囲と威力を更新（クールダウンは単なるインターバルとして機能）
             let garlic = bullets.find(b => b.type === 'garlic');

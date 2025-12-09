@@ -494,7 +494,7 @@ case 2: { // 斧 (Axe)
         // ここではまだニンニク弾が存在しない場合のみ生成する。
         if (!bullets.some(b => b.type === 'garlic')) {
             let garlicSize = 50 + w.lv * 15 * player.areaMult;
-            bullets.push({ type: 'garlic', x: player.x, y: player.y, dmg: dmg, size: garlicSize, life: Infinity, pierce: 99 });
+            bullets.push({ type: 'garlic', x: player.x, y: player.y, dmg: dmg*2, size: garlicSize, life: Infinity, pierce: 99 });
         } else {
              // すでに存在する場合は範囲と威力を更新（クールダウンは単なるインターバルとして機能）
             let garlic = bullets.find(b => b.type === 'garlic');
@@ -551,7 +551,7 @@ case 2: { // 斧 (Axe)
         break;
     case 9: // 五芒星 (Pentagram)
         // 画面全体攻撃
-        enemies.forEach(e => takeDamage(e, e.maxHp)); // 即死
+        enemies.forEach(e => takeDamage(e, e.maxHp*0.5)); // 即死
         showFloat(player.x, player.y, "PURGE!", "red");
         break;
     case 10: // 剣 (Sword)

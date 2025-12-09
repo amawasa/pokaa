@@ -1147,8 +1147,8 @@ function update() {
             e.y += Math.sin(angle) * moveSpeed * 0.5;
           } else if (e.patternTimer === 60) {
             // テレポート
-            let newX = player.x + (Math.random() + 0.5) * 1000;
-            let newY = player.y + (Math.random() + 0.5) * 1000;
+            let newX = player.x + (Math.random() - 0.5) * 1000;
+            let newY = player.y + (Math.random() - 0.5) * 1000;
             e.x = newX;
             e.y = newY;
             showFloat(e.x, e.y, "Teleport!", "cyan");

@@ -280,7 +280,7 @@ let player = {
   dmgMult: 1.0, areaMult: 1.0, cdMult: 1.0, amount: 0, projSpeedMult: 1.0,
   rangeMult: 1.0, evasion: 0.0, 
   invincibleTimer: 0.1, 
-  weapons: [ {id:5, lv:1, cd:0}],
+  weapons: [ {id:0, lv:1, cd:0}],
    sweapons: [
     // 例:
     
@@ -2932,6 +2932,7 @@ function drawFog(ctx, canvas) {
     // 3. 他の描画に影響を与えないように戻す
     ctx.globalCompositeOperation = 'source-over';
 }
+
 
 
 

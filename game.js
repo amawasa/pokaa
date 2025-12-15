@@ -1450,7 +1450,6 @@ if (player.invincibleTime > 0) {
 
   draw();
   updateHUD();
-updateEvents(deltaTime, gameTime)
   frame++;
   requestAnimationFrame(loop);
 }
@@ -2933,6 +2932,7 @@ function drawFog(ctx, canvas) {
 
 
 init();
+
 
 
 

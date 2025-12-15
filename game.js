@@ -332,21 +332,21 @@ const barrier = 0;
 
 
 const GAME_EVENTS = [
-      {id:-1,time: 10, name: '', effect: () => {  }, color: 'rgba(0, 0, 0, 0)' },
-    {id: 4,time: 10, name: '赤い月', effect: () => { eventModifiers.enemyDmgMult = 1.5; }, color: 'rgba(255, 0, 0, 0.9)' },
-    { id: 0,time: 8, name: '濃い霧', effect: () => { fogActive = true; console.log('fog ON');  }, color: 'rgba(50, 50, 50, 0.9)' },
-    { id: 2,time: 3, name: '濃い霧', effect: () => { fogActive = false; }, color: 'rgba(0, 0, 0, 0)' },
-    { id: 3,time: 60, name: '隕石の雨', effect: () => { /* updateで対応 */ }, color: 'rgba(150, 50, 0, 0.9)' },
-    {  id: 1,time: 60, name: '氷河の海', effect: () => { player.isSliding = true; }, color: 'rgba(0, 100, 255, 0.9)' },
-    {  id: 5,time: 1, name: '氷河の海', effect: () => { player.isSliding = false; }, color: 'rgba(0, 0, 0, 0)' },
-    { id : 6,time: 60, name: '鉛の雨', effect: () => { /* スポーンで対応 */ }, color: 'rgba(100, 100, 100, 0.9)' },
-    { id : 7,time: 1, name: '開戦', effect: () => { enemies = []; spawnBoss('BulletQueen'); bossActive = true; }, color: 'rgba(255, 100, 100, 0.9)' },
-    { id : 8,time: 60, name: '四面楚歌', effect: () => { spawnAmbush(150); }, color: 'rgba(50, 50, 50, 0.9)' },
-    { id : 9,time: 1, name: '高速襲撃', effect: () => { enemies = []; spawnBoss('TeleportHunter'); bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
-    {id : 10, time: 60, name: '時の歪み', effect: () => { eventModifiers.cdMult = 0.5; }, color: 'rgba(100, 255, 100, 0.9)' },
-    {id : 11,time: 1, name: '魔導の嵐', effect: () => { enemies = []; spawnBoss('ArcMage'); bossActive = true; }, color: 'rgba(0, 150, 255, 0.9)' },
-    {id : 12,time: 70, name: '闇の侵攻', effect: () => { ENEMY_TYPES.forEach(t => t.speed *= 1.1); }, color: 'rgba(0, 0, 0, 0.9)' },
-    {id : 13, time: 80, name: '天上の祝福', effect: () => { eventModifiers.expMult = 2.0; }, color: 'rgba(255, 255, 255, 0.9)' },
+      {id:0,time: 50, name: '', effect: () => {  }, color: 'rgba(0, 0, 0, 0)' },
+    {id: 1,time: 60, name: '赤い月', effect: () => { eventModifiers.enemyDmgMult = 1.5; }, color: 'rgba(255, 0, 0, 0.9)' },
+    { id: 2,time: 60, name: '濃い霧', effect: () => { fogActive = true; console.log('fog ON');  }, color: 'rgba(50, 50, 50, 0.9)' },
+    { id: 3,time: 1, name: '濃い霧', effect: () => { fogActive = false; }, color: 'rgba(0, 0, 0, 0)' },
+    { id: 4,time: 60, name: '隕石の雨', effect: () => { /* updateで対応 */ }, color: 'rgba(150, 50, 0, 0.9)' },
+    {  id: 5,time: 60, name: '氷河の海', effect: () => { player.isSliding = true; }, color: 'rgba(0, 100, 255, 0.9)' },
+    {  id: 6,time: 1, name: '氷河の海', effect: () => { player.isSliding = false; }, color: 'rgba(0, 0, 0, 0)' },
+    { id : 7,time: 60, name: '鉛の雨', effect: () => { /* スポーンで対応 */ }, color: 'rgba(100, 100, 100, 0.9)' },
+    { id : 8,time: 1, name: '開戦', effect: () => { enemies = []; spawnBoss('BulletQueen'); bossActive = true; }, color: 'rgba(255, 100, 100, 0.9)' },
+    { id : 9,time: 60, name: '四面楚歌', effect: () => { spawnAmbush(150); }, color: 'rgba(50, 50, 50, 0.9)' },
+    { id : 10,time: 1, name: '高速襲撃', effect: () => { enemies = []; spawnBoss('TeleportHunter'); bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
+    {id : 11, time: 60, name: '時の歪み', effect: () => { eventModifiers.cdMult = 0.5; }, color: 'rgba(100, 255, 100, 0.9)' },
+    {id : 12,time: 1, name: '魔導の嵐', effect: () => { enemies = []; spawnBoss('ArcMage'); bossActive = true; }, color: 'rgba(0, 150, 255, 0.9)' },
+    {id : 13,time: 70, name: '闇の侵攻', effect: () => { ENEMY_TYPES.forEach(t => t.speed *= 1.1); }, color: 'rgba(0, 0, 0, 0.9)' },
+    {id : 14, time: 80, name: '天上の祝福', effect: () => { eventModifiers.expMult = 2.0; }, color: 'rgba(255, 255, 255, 0.9)' },
 ];
 //ゲームスタート関数
 function startGame(mode) {
@@ -2939,4 +2939,5 @@ function drawFog(ctx, canvas) {
 
 
 init();
+
 

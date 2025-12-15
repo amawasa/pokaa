@@ -243,7 +243,7 @@ function initPlayer(mode = 'normal') {
     evasion: 0.0,
 
     invincibleTimer: 0.1,
-    weapons: [{ id: 5, lv: 1, cd: 0 },{ id: 0, lv: 1, cd: 0 },{ id: 14, lv: 1, cd: 0 }],
+    weapons: [{ id: 0, lv: 1, cd: 0 }],
     sweapons: [],
     statLv: {},
 
@@ -3121,3 +3121,4 @@ function drawFog(ctx, canvas) {
 
 
 init();
+

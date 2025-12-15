@@ -19,7 +19,7 @@ let currentEventIndex = -2;   // 現在のイベントID
 let currentEventRemaining = 0; // 現在のイベント残り時間
 // ゲームオーバー情報保存用
 let gameOverData = {};
-
+let triggeredEvents = new Set();
 
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.addEventListener('resize', resize);
@@ -2932,6 +2932,7 @@ function drawFog(ctx, canvas) {
 
 
 init();
+
 
 
 

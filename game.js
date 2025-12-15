@@ -551,6 +551,9 @@ function drawGameOverScreen() {
 
 let lastEventTime = null; // 前回発火したイベントの time を記憶
 
+
+
+
 function updateHUD() {
   document.getElementById('lv-text').innerText = player.lv;
 
@@ -621,8 +624,6 @@ function updateHUD() {
         }
     });
 }
-
-
 
 
 
@@ -2932,6 +2933,7 @@ function drawFog(ctx, canvas) {
 
 
 init();
+
 
 
 

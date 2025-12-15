@@ -579,59 +579,52 @@ function updateHUD() {
   } else {
     BOSS_HP_BAR.style.display = 'none';
   }
+   // イベント発動判定
+    GAME_EVENTS.forEach(ev => {
+        if (gameTime === ev.time && !triggeredEvents.has(ev.time)) {
+            triggeredEvents.add(ev.time);
+            currentEvent = ev.name;
+            ev.effect();
 
-
-
-
-
-
-}
-
-function updateEvents(deltaTime, gameTime) {
-    // ボスが生きているか確認
-    const bossAlive = enemies.some(e => bossTypes.includes(e.type));
-
-    // 現在イベントがない場合、または残り時間がゼロでボスもいなければ次のイベント
-    if ((currentEventIndex === -1 || currentEventRemaining <= 0) && !bossAlive) {
-        const nextEvent = GAME_EVENTS.find(e => e.id === currentEventIndex + 1);
-        if (nextEvent) {
-            currentEventIndex = nextEvent.id;
-            currentEventRemaining = nextEvent.time; // 発動時に残り時間をセット
-            currentEvent = nextEvent.name;
-
-            // 発動演出
-            const overlay = document.getElementById('event-animation-overlay');
-            document.getElementById('event-message').innerText = `EVENT: ${currentEvent}`;
-            overlay.style.backgroundColor = nextEvent.color;
-            overlay.classList.add('event-flash');
-            nextEvent.effect();
-
-            setTimeout(() => {
-                overlay.classList.remove('event-flash');
-                overlay.style.backgroundColor = 'transparent';
-            }, 500);
-        }
-    }
-
-    // 残り時間を減らす（ボスが生きていなければ）
-    if (!bossAlive && currentEventRemaining > 0) {
-        currentEventRemaining -= deltaTime;
-
-        if (currentEventRemaining <= 0) {
-            // イベント終了時のリセット
-            switch (currentEvent) {
-                case '赤い月': eventModifiers.enemyDmgMult = 1.0; break;
-                case '時の歪み': eventModifiers.cdMult = 1.0; break;
-                case '天上の祝福': eventModifiers.expMult = 1.0; break;
-                case '氷河の海': player.isSliding = false; break;
-                case '濃い霧': fogActive = false; break;
+            if (ELEM_EVENT_MESSAGE) ELEM_EVENT_MESSAGE.innerText = `EVENT: ${ev.name}`;
+            if (ELEM_EVENT_OVERLAY) {
+                ELEM_EVENT_OVERLAY.style.backgroundColor = ev.color || 'transparent';
+                ELEM_EVENT_OVERLAY.classList.add('event-flash');
+                setTimeout(() => {
+                    ELEM_EVENT_OVERLAY.classList.remove('event-flash');
+                    ELEM_EVENT_OVERLAY.style.backgroundColor = 'transparent';
+                }, 500);
             }
-            document.getElementById('event-message').innerText = '';
-            eventModifiers.speedDamp = 1.0;
-            currentEvent = 'None';
         }
-    }
+    });
+
+    // 持続イベントの終了判定
+    GAME_EVENTS.forEach(ev => {
+        if (triggeredEvents.has(ev.time) && ev.duration > 0) {
+            if (gameTime >= ev.time + ev.duration) {
+                triggeredEvents.delete(ev.time);
+                
+                // 効果リセット
+                switch(ev.name) {
+                    case '赤い月': eventModifiers.enemyDmgMult = 1.0; break;
+                    case '氷河の海': player.isSliding = false; break;
+                    case '時の歪み': eventModifiers.cdMult = 1.0; break;
+                    case '天上の祝福': eventModifiers.expMult = 1.0; break;
+                }
+
+                if (ELEM_EVENT_MESSAGE && currentEvent === ev.name) {
+                    ELEM_EVENT_MESSAGE.innerText = '';
+                }
+                eventModifiers.speedDamp = 1.0;
+
+            }
+        }
+    });
 }
+
+
+
+
 
 function dropItem(x, y, expVal) {
   items.push({ kind: 'exp', x: x, y: y, val: expVal });
@@ -2939,5 +2932,6 @@ function drawFog(ctx, canvas) {
 
 
 init();
+
 
 

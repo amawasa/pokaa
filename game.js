@@ -223,7 +223,7 @@ function initPlayer(mode = 'normal') {
     x: 0, y: 0, size: 15, color: '#00d2ff',
     hp: 100,
     maxHp: 100,
-    exp: 1000,
+    exp: 0,
     nextExp: 10,
     lv: 1,
 
@@ -243,7 +243,7 @@ function initPlayer(mode = 'normal') {
     evasion: 0.0,
 
     invincibleTimer: 0.1,
-    weapons: [{ id: 5, lv: 1, cd: 0 },{ id: 0, lv: 1, cd: 0 },{ id: 14, lv: 1, cd: 0 }],
+    weapons: [{ id: 0, lv: 1, cd: 0 }],
     sweapons: [],
     statLv: {},
 
@@ -2939,3 +2939,4 @@ function drawFog(ctx, canvas) {
 
 
 init();
+

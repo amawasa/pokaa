@@ -19,7 +19,7 @@ let currentEventIndex = -2;   // 現在のイベントID
 let currentEventRemaining = 0; // 現在のイベント残り時間
 // ゲームオーバー情報保存用
 let gameOverData = {};
-let triggeredEvents = new Set();
+
 
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.addEventListener('resize', resize);
@@ -243,7 +243,7 @@ function initPlayer(mode = 'normal') {
     evasion: 0.0,
 
     invincibleTimer: 0.1,
-    weapons: [{ id: 0, lv: 1, cd: 0 }],
+    weapons: [{ id: 5, lv: 1, cd: 0 },{ id: 0, lv: 1, cd: 0 },{ id: 14, lv: 1, cd: 0 }],
     sweapons: [],
     statLv: {},
 
@@ -275,12 +275,12 @@ function initPlayer(mode = 'normal') {
 
 let player = { 
   x: 0, y: 0, size: 15, color: '#00d2ff', 
-  hp: 1, maxHp: 100, exp: 0, nextExp: 10, lv: 1, 
+  hp: 100, maxHp: 100, exp: 0, nextExp: 10, lv: 1, 
   speed: 180, armor: 0, regen: 0, luck: 0.01, magnet: 80, greed: 1,
   dmgMult: 1.0, areaMult: 1.0, cdMult: 1.0, amount: 0, projSpeedMult: 1.0,
   rangeMult: 1.0, evasion: 0.0, 
   invincibleTimer: 0.1, 
-  weapons: [ {id:0, lv:1, cd:0}],
+  weapons: [ {id:5, lv:1, cd:0}],
    sweapons: [
     // 例:
     
@@ -332,21 +332,21 @@ const barrier = 0;
 
 
 const GAME_EVENTS = [
-      {id:0,time: 50, name: '', effect: () => {  }, color: 'rgba(0, 0, 0, 0)' },
-    {id: 1,time: 60, name: '赤い月', effect: () => { eventModifiers.enemyDmgMult = 1.5; }, color: 'rgba(255, 0, 0, 0.9)' },
-    { id: 2,time: 60, name: '濃い霧', effect: () => { fogActive = true; console.log('fog ON');  }, color: 'rgba(50, 50, 50, 0.9)' },
-    { id: 3,time: 1, name: '濃い霧', effect: () => { fogActive = false; }, color: 'rgba(0, 0, 0, 0)' },
-    { id: 4,time: 60, name: '隕石の雨', effect: () => { /* updateで対応 */ }, color: 'rgba(150, 50, 0, 0.9)' },
-    {  id: 5,time: 60, name: '氷河の海', effect: () => { player.isSliding = true; }, color: 'rgba(0, 100, 255, 0.9)' },
-    {  id: 6,time: 1, name: '氷河の海', effect: () => { player.isSliding = false; }, color: 'rgba(0, 0, 0, 0)' },
-    { id : 7,time: 60, name: '鉛の雨', effect: () => { /* スポーンで対応 */ }, color: 'rgba(100, 100, 100, 0.9)' },
-    { id : 8,time: 1, name: '開戦', effect: () => { enemies = []; spawnBoss('BulletQueen'); bossActive = true; }, color: 'rgba(255, 100, 100, 0.9)' },
-    { id : 9,time: 60, name: '四面楚歌', effect: () => { spawnAmbush(150); }, color: 'rgba(50, 50, 50, 0.9)' },
-    { id : 10,time: 1, name: '高速襲撃', effect: () => { enemies = []; spawnBoss('TeleportHunter'); bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
-    {id : 11, time: 60, name: '時の歪み', effect: () => { eventModifiers.cdMult = 0.5; }, color: 'rgba(100, 255, 100, 0.9)' },
-    {id : 12,time: 1, name: '魔導の嵐', effect: () => { enemies = []; spawnBoss('ArcMage'); bossActive = true; }, color: 'rgba(0, 150, 255, 0.9)' },
-    {id : 13,time: 70, name: '闇の侵攻', effect: () => { ENEMY_TYPES.forEach(t => t.speed *= 1.1); }, color: 'rgba(0, 0, 0, 0.9)' },
-    {id : 14, time: 80, name: '天上の祝福', effect: () => { eventModifiers.expMult = 2.0; }, color: 'rgba(255, 255, 255, 0.9)' },
+      {id:1,time: 100, name: '', effect: () => {  }, color: 'rgba(0, 0, 0, 0)' },
+    {id: 2,time: 60, name: '赤い月', effect: () => { eventModifiers.enemyDmgMult = 1.5; }, color: 'rgba(255, 0, 0, 0.9)' },
+    { id: 3,time: 60, name: '濃い霧', effect: () => { fogActive = true; console.log('fog ON');  }, color: 'rgba(50, 50, 50, 0.9)' },
+    { id: 4,time: 1, name: '濃い霧', effect: () => { fogActive = false; }, color: 'rgba(0, 0, 0, 0)' },
+    { id: 5,time: 60, name: '隕石の雨', effect: () => { /* updateで対応 */ }, color: 'rgba(150, 50, 0, 0.9)' },
+    {  id: 6,time: 60, name: '氷河の海', effect: () => { player.isSliding = true; }, color: 'rgba(0, 100, 255, 0.9)' },
+    {  id: 7,time: 1, name: '氷河の海', effect: () => { player.isSliding = false; }, color: 'rgba(0, 0, 0, 0)' },
+    { id : 8,time: 60, name: '鉛の雨', effect: () => { /* スポーンで対応 */ }, color: 'rgba(100, 100, 100, 0.9)' },
+    { id : 9,time: 10, name: '開戦', effect: () => { enemies = []; spawnBoss('BulletQueen'); bossActive = true; }, color: 'rgba(255, 100, 100, 0.9)' },
+    { id : 10,time: 60, name: '四面楚歌', effect: () => { spawnAmbush(150); }, color: 'rgba(50, 50, 50, 0.9)' },
+    { id : 11,time: 10, name: '高速襲撃', effect: () => { enemies = []; spawnBoss('TeleportHunter'); bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
+    {id : 12, time: 60, name: '時の歪み', effect: () => { eventModifiers.cdMult = 0.5; }, color: 'rgba(100, 255, 100, 0.9)' },
+    {id : 13,time: 10, name: '魔導の嵐', effect: () => { enemies = []; spawnBoss('ArcMage'); bossActive = true; }, color: 'rgba(0, 150, 255, 0.9)' },
+    {id : 14,time: 70, name: '闇の侵攻', effect: () => { ENEMY_TYPES.forEach(t => t.speed *= 1.1); }, color: 'rgba(0, 0, 0, 0.9)' },
+    {id : 15, time: 80, name: '天上の祝福', effect: () => { eventModifiers.expMult = 2.0; }, color: 'rgba(255, 255, 255, 0.9)' },
 ];
 //ゲームスタート関数
 function startGame(mode) {
@@ -551,9 +551,6 @@ function drawGameOverScreen() {
 
 let lastEventTime = null; // 前回発火したイベントの time を記憶
 
-
-
-
 function updateHUD() {
   document.getElementById('lv-text').innerText = player.lv;
 
@@ -582,49 +579,77 @@ function updateHUD() {
   } else {
     BOSS_HP_BAR.style.display = 'none';
   }
-   // イベント発動判定
-    GAME_EVENTS.forEach(ev => {
-        if (gameTime === ev.time && !triggeredEvents.has(ev.time)) {
-            triggeredEvents.add(ev.time);
-            currentEvent = ev.name;
-            ev.effect();
 
-            if (ELEM_EVENT_MESSAGE) ELEM_EVENT_MESSAGE.innerText = `EVENT: ${ev.name}`;
-            if (ELEM_EVENT_OVERLAY) {
-                ELEM_EVENT_OVERLAY.style.backgroundColor = ev.color || 'transparent';
-                ELEM_EVENT_OVERLAY.classList.add('event-flash');
-                setTimeout(() => {
-                    ELEM_EVENT_OVERLAY.classList.remove('event-flash');
-                    ELEM_EVENT_OVERLAY.style.backgroundColor = 'transparent';
-                }, 500);
-            }
-        }
-    });
 
-    // 持続イベントの終了判定
-    GAME_EVENTS.forEach(ev => {
-        if (triggeredEvents.has(ev.time) && ev.duration > 0) {
-            if (gameTime >= ev.time + ev.duration) {
-                triggeredEvents.delete(ev.time);
-                
-                // 効果リセット
-                switch(ev.name) {
-                    case '赤い月': eventModifiers.enemyDmgMult = 1.0; break;
-                    case '氷河の海': player.isSliding = false; break;
-                    case '時の歪み': eventModifiers.cdMult = 1.0; break;
-                    case '天上の祝福': eventModifiers.expMult = 1.0; break;
-                }
 
-                if (ELEM_EVENT_MESSAGE && currentEvent === ev.name) {
-                    ELEM_EVENT_MESSAGE.innerText = '';
-                }
-                eventModifiers.speedDamp = 1.0;
 
-            }
-        }
-    });
+
+
 }
 
+
+
+
+function getNextEvent() {
+    // id の昇順でソート（初回だけやると効率的）
+    const sortedEvents = GAME_EVENTS.slice().sort((a,b) => a.id - b.id);
+
+    // currentEventIndex より大きい id の中で最小のものを探す
+    return sortedEvents.find(e => e.id > currentEventIndex);
+}
+
+function updateEvents(deltaTime, gameTime) {
+  if (!isPaused) {
+
+    const bossAlive = enemies.some(e => bossTypes.includes(e.type));
+
+    // 現在イベントがない、または残り時間ゼロでボスもいなければ次のイベント
+    if ((currentEventIndex === -1 || currentEventRemaining <= 0) && !bossAlive) {
+        const nextEvent = getNextEvent(); // id 小さい順に取得
+        if (nextEvent) {
+            currentEventIndex = nextEvent.id;
+            currentEventRemaining = nextEvent.time;
+            currentEvent = nextEvent.name;
+
+            console.log(`[EVENT START] ${currentEvent} | Duration: ${currentEventRemaining.toFixed(2)}s`);
+
+            // 発動演出
+            const overlay = document.getElementById('event-animation-overlay');
+            document.getElementById('event-message').innerText = `EVENT: ${currentEvent}`;
+            overlay.style.backgroundColor = nextEvent.color;
+            overlay.classList.add('event-flash');
+            nextEvent.effect();
+
+            setTimeout(() => {
+                overlay.classList.remove('event-flash');
+                overlay.style.backgroundColor = 'transparent';
+            }, 500);
+        }
+    }
+
+    // 残り時間を減らす（ボスが生きていなければ）
+    if (!bossAlive && currentEventRemaining > 0) {
+        currentEventRemaining -= deltaTime;
+
+        // 毎フレーム残り時間を表示
+        console.log(`[EVENT RUNNING] ${currentEvent} | Remaining: ${currentEventRemaining.toFixed(2)}s`);
+
+        if (currentEventRemaining <= 0) {
+            // イベント終了時のリセット
+            console.log(`[EVENT END] ${currentEvent}`);
+            switch (currentEvent) {
+                case '赤い月': eventModifiers.enemyDmgMult = 1.0; break;
+                case '時の歪み': eventModifiers.cdMult = 1.0; break;
+                case '天上の祝福': eventModifiers.expMult = 1.0; break;
+                case '氷河の海': player.isSliding = false; break;
+                case '濃い霧': fogActive = false; break;
+            }
+            document.getElementById('event-message').innerText = '';
+            eventModifiers.speedDamp = 1.0;
+            currentEvent = 'None';
+        }
+    }
+}  }
 
 
 function dropItem(x, y, expVal) {
@@ -1421,6 +1446,7 @@ function init() {
   player.y = 0;
   lastTime = performance.now();
   requestAnimationFrame(loop);
+  getNextEvent()
 }
 
 let lastTime = performance.now();
@@ -1450,6 +1476,7 @@ if (player.invincibleTime > 0) {
 
   draw();
   updateHUD();
+updateEvents(deltaTime, gameTime)
   frame++;
   requestAnimationFrame(loop);
 }
@@ -1882,32 +1909,153 @@ case 1: // 回転弾フェーズ
     }
 }
 
-// --- TeleportHunterBoss 専用ロジック ---
-        else if (e.type === 'TeleportHunterBoss') {
-          e.patternTimer++;
-          
-          if (e.patternTimer < 60) {
-            // 予備動作 (移動)
-            e.x += Math.cos(angle) * moveSpeed * 0.5;
-            e.y += Math.sin(angle) * moveSpeed * 0.5;
-          } else if (e.patternTimer === 60) {
-            // テレポート
-            let newX = player.x + (Math.random() - 0.5) * 1000;
-            let newY = player.y + (Math.random() - 0.5) * 1000;
-            e.x = newX;
-            e.y = newY;
-            showFloat(e.x, e.y, "Teleport!", "cyan");
-          } else if (e.patternTimer > 60 && e.patternTimer < 180 && e.patternTimer % 10 === 0) {
-            // 乱射
-            const numShots = 3;
-            for (let i = 0; i < numShots; i++) {
-              let randomAngle = angle + (Math.random() - 0.5) * rad(90);
-              fireEnemyBullet(e, true, randomAngle, 'normal', 1.2);
+if (e.type === 'TeleportHunterBoss') {
+    // --- 共通初期化 ---
+    e.patternTimer ??= 0;      // サイクル全体タイマー
+    e.fireTimer ??= 0;         // 連射・発射タイマー
+    e.hasTeleported ??= false; // TP済みフラグ
+    e.waitTimer ??= 0;         // 待機タイマー
+    e.loopCount ??= 0;         // ループカウンター
+    e.patternCase ??= 1;       // デフォルト行動
+
+    const tpRadius = 300;
+
+    // --- 待機中は何もしない ---
+    if (e.waitTimer > 0) {
+        e.waitTimer -= deltaTime;
+        return;
+    }
+
+    // プレイヤー方向
+    const angleToPlayer = Math.atan2(player.y - e.y, player.x - e.x);
+
+    switch (e.patternCase) {
+        case 1:
+            // TP → 乱射 ワンセット x4
+            if (!e.hasTeleported) {
+                const angle = Math.random() * Math.PI * 2;
+                e.x = player.x + Math.cos(angle) * tpRadius;
+                e.y = player.y + Math.sin(angle) * tpRadius;
+                showFloat(e.x, e.y, "Teleport!", "cyan");
+                e.hasTeleported = true;
+                e.fireTimer = 0;
             }
-          } else if (e.patternTimer > 240) {
-            e.patternTimer = 0; // リセット
-          }
+
+            // 乱射
+            e.fireTimer -= deltaTime;
+            const shotsPerSecond = 15;
+            const interval = 1 / shotsPerSecond;
+            while (e.fireTimer <= 0 && e.hasTeleported) {
+                const randomAngle = angleToPlayer + (Math.random() - 0.5) * Math.PI / 2;
+                fireEnemyBullet(e, true, randomAngle, 'normal', 40);
+                e.fireTimer += interval;
+            }
+
+            // 1回セット終了
+            if (e.patternTimer >= 0.3) {
+                e.patternTimer = 0;
+                e.hasTeleported = false;
+                e.loopCount++;
+            }
+
+            // 4回ループ終了
+            if (e.loopCount >= 6) {
+                e.loopCount = 0;
+                e.waitTimer = 1.0; // 1秒待機
+                e.patternCase = Math.floor(Math.random() * 3) + 1; // case1 or 2 ランダム
+            }
+
+            e.patternTimer += deltaTime;
+            break;
+
+case 2:
+    const setsPerCase2 = 7;
+    const intervalBig = 0.1;
+
+    e.bigShotFired ??= false;
+
+    // 7セットが終わるまでループ
+    if (e.loopCount < setsPerCase2) {
+
+        // TPがまだなら実行
+        if (!e.hasTeleported) {
+            const angle = Math.random() * Math.PI * 2;
+            e.x = player.x + Math.cos(angle) * tpRadius;
+            e.y = player.y + Math.sin(angle) * tpRadius;
+            showFloat(e.x, e.y, "Teleport!", "cyan");
+            e.hasTeleported = true;
+            e.fireTimer = intervalBig; // TP後0.1秒待機
+            e.bigShotFired = false;
         }
+
+        // 0.1秒経ったら big弾発射
+        e.fireTimer -= deltaTime;
+        if (e.fireTimer <= 0 && e.hasTeleported && !e.bigShotFired) {
+            const angleToPlayer = Math.atan2(player.y - e.y, player.x - e.x);
+            fireEnemyBullet(e, true, angleToPlayer, 'big', 60);
+            e.bigShotFired = true;
+            e.fireTimer = intervalBig; // big弾後も0.1秒待機
+        }
+
+        // big弾後、次のTPセット準備
+        if (e.bigShotFired && e.fireTimer <= 0) {
+            e.hasTeleported = false;
+            e.loopCount++;
+        }
+
+    } else {
+        // 7セット終了後
+        e.waitTimer = 3.0;
+        e.hasTeleported = false;
+        e.loopCount = 0;
+        e.bigShotFired = false;
+        e.patternCase = Math.floor(Math.random() * 3) + 1; // 次の行動をランダム
+    }
+    break;
+
+
+
+
+        case 3:
+            // TP + 乱射 サイクル型
+            const cycleTime = 3.0;
+            const waitTime = 1.0;
+
+            if (!e.hasTeleported) {
+                const angle = Math.random() * Math.PI * 2;
+                e.x = player.x + Math.cos(angle) * tpRadius;
+                e.y = player.y + Math.sin(angle) * tpRadius;
+                showFloat(e.x, e.y, "Teleport!", "cyan");
+                e.hasTeleported = true;
+                e.fireTimer = 0;
+            }
+
+            e.fireTimer -= deltaTime;
+            const shotsPerSec = 10;
+            const intervalCycle = 1 / shotsPerSec;
+            while (e.fireTimer <= 0 && e.hasTeleported) {
+                const randomAngle = angleToPlayer + (Math.random() - 0.5) * Math.PI / 2;
+                fireEnemyBullet(e, true, randomAngle, 'normal', 30);
+                e.fireTimer += intervalCycle;
+            }
+
+            e.patternTimer += deltaTime;
+
+            if (e.patternTimer >= cycleTime) {
+                e.patternTimer = 0;
+                e.hasTeleported = false;
+                e.fireTimer = 0;
+                e.waitTimer = waitTime;
+                e.patternCase = Math.floor(Math.random() * 3) + 1; // 次の行動ランダム
+            }
+            break;
+    }
+
+    return; // 他の移動や処理に行かない
+}
+
+
+
       // --- ArcMageBoss ---
 if (e.type === 'ArcMageBoss') {
 
@@ -1994,6 +2142,48 @@ e.tpTimer ??= 0;  // これで未定義なら 0 に初期化
     }
 
 
+      // 特殊な敵の動作
+      if (e.type === 'shooter' || e.type === 'mage') {
+        const SHOOT_RANGE = 300;
+        const PADDING = 50;
+
+        if (dist > SHOOT_RANGE) {
+          e.x += Math.cos(angle) * moveSpeed;
+          e.y += Math.sin(angle) * moveSpeed;
+          e.state = 'move';
+        } else if (dist < SHOOT_RANGE - PADDING) {
+          let awayAngle = angle + Math.PI;
+          e.x += Math.cos(awayAngle) * moveSpeed * 0.5;
+          e.y += Math.sin(awayAngle) * moveSpeed * 0.5;
+          e.state = 'retreat';
+        } else {
+          e.state = 'idle';
+          let shootCD = e.type === 'shooter' ? 90 : 60;
+          if (e.cd % shootCD === 0) { fireEnemyBullet(e); }
+        }
+        return;
+      }
+
+      if (e.type === 'charger') {
+        const CHARGE_DELAY = 90;
+        const CHARGE_SPEED = moveSpeed * 4;
+
+        if (e.state === 'move' && e.cd > CHARGE_DELAY) {
+          e.chargeAngle = angle;
+          e.state = 'charge';
+          e.cd = 0;
+        } else if (e.state === 'charge' && e.cd < 60) {
+          e.x += Math.cos(e.chargeAngle) * CHARGE_SPEED;
+          e.y += Math.sin(e.chargeAngle) * CHARGE_SPEED;
+        } else if (e.state === 'charge' && e.cd >= 60) {
+          e.state = 'move';
+          e.cd = 0;
+        } else {
+          e.x += Math.cos(angle) * moveSpeed;
+          e.y += Math.sin(angle) * moveSpeed;
+        }
+        return;
+      }
 
     // --- TP処理 ---
     const distToPlayer = Math.hypot(player.x - e.x, player.y - e.y);
@@ -2930,11 +3120,4 @@ function drawFog(ctx, canvas) {
 
 
 
-
 init();
-
-
-
-
-
-

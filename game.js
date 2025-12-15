@@ -684,9 +684,7 @@ function takeDamage(e, amount) {
         bossActive = false;
         dropItem(e.x, e.y, e.exp); 
         
-        if (gameTime >= 660 && !enemies.some(boss => boss.type.includes('Boss'))) {
-            gameOver(true);
-        }
+        
         return;
     }
     
@@ -3121,4 +3119,5 @@ function drawFog(ctx, canvas) {
 
 
 init();
+
 

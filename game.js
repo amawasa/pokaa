@@ -8,7 +8,7 @@ const BULLET_QUEEN_COOLDOWN = 1.5; // BulletQueenBossの弾発射間隔 (1.5秒)
 const TELEPORT_COOLDOWN = 3; // TeleportHunterBossのテレポート間隔 (3秒)   
 const TELEPORT_WARNING_FRAMES = 1; // テレポート警告線を表示する時間 (1秒)
 const SLIDE_INERTIA = 0.97; // 慣性力（スライディング時の減速の弱さ）
-const SLIDE_INPUT_CORRECTION = 0.015; // 慣性力への入力補正の割合
+const SLIDE_INPUT_CORRECTION = 0.012; // 慣性力への入力補正の割合
 // ゲーム状態フラグ
 let isGameOver = false;
 //ゲームモード設定
@@ -3119,5 +3119,6 @@ function drawFog(ctx, canvas) {
 
 
 init();
+
 
 

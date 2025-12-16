@@ -162,11 +162,7 @@ const UPGRADES = [
 
 
 
-  // 魔力・筋力・知力だけ +1
-  { id: 'magic', type: 'stat', name: '魔力の水晶', icon: '🔮', maxLv: 20, baseDesc: '魔力up', unit: '', apply: (p) => p.magic += 1, val: 1 },
-  { id: 'strength', type: 'stat', name: '筋力のチーズ', icon: '🧀', maxLv: 20, baseDesc: '筋力up', unit: '', apply: (p) => p.strength += 1, val: 1 },
-  { id: 'intelligence', type: 'stat', name: '知力の書', icon: '📖', maxLv: 20, baseDesc: '知力up', unit: '', apply: (p) => p.intelligence += 1, val: 1 },
-
+ 
   // 以下は初期値維持で倍率や固定値を適用
   { id: 'cd', type: 'stat', name: '古びた砂時計', icon: '⌛️', maxLv: 20, baseDesc: 'クールタイム削減', unit: '%', apply: (p) => p.cdMult *= 0.9, val: -10 },
   { id: 'area', type: 'stat', name: 'ロウソク', icon: '🕯️', maxLv: 20, baseDesc: '攻撃範囲', unit: '%', apply: (p) => p.areaMult += 0.15, val: 15 },
@@ -3119,6 +3115,7 @@ function drawFog(ctx, canvas) {
 
 
 init();
+
 
 
 

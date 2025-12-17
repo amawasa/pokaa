@@ -340,9 +340,9 @@ const GAME_EVENTS = [
     { id : 10,time: 60, name: '四面楚歌', effect: () => { spawnAmbush(150); }, color: 'rgba(50, 50, 50, 0.9)' },
     { id : 11,time: 10, name: '高速襲撃', effect: () => { enemies = []; spawnBoss('TeleportHunter'); bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
     {id : 12, time: 60, name: '時の歪み', effect: () => { eventModifiers.cdMult = 0.5; }, color: 'rgba(100, 255, 100, 0.9)' },
-  { id : 13,time: 10, name: 'ボスラッシュ', effect: () => { enemies = []; spawnBoss('TeleportHunter'),spawnBoss('ArcMage');bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
-    {id : 16,time: 10, name: '魔導の嵐', effect: () => { enemies = []; spawnBoss('ArcMage'); bossActive = true; }, color: 'rgba(0, 150, 255, 0.9)' },
-    {id : 14,time: 70, name: '闇の侵攻', effect: () => { ENEMY_TYPES.forEach(t => t.speed *= 1.1); }, color: 'rgba(0, 0, 0, 0.9)' },
+  { id : 14,time: 10, name: 'ボスラッシュ', effect: () => { enemies = []; spawnBoss('TeleportHunter'),spawnBoss('ArcMage');bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
+    {id : 13,time: 10, name: '魔導の嵐', effect: () => { enemies = []; spawnBoss('ArcMage'); bossActive = true; }, color: 'rgba(0, 150, 255, 0.9)' },
+    {id : 16,time: 70, name: '闇の侵攻', effect: () => { ENEMY_TYPES.forEach(t => t.speed *= 1.1); }, color: 'rgba(0, 0, 0, 0.9)' },
     {id : 15, time: 80, name: '天上の祝福', effect: () => { eventModifiers.expMult = 2.0; }, color: 'rgba(255, 255, 255, 0.9)' },
 ];
 //ゲームスタート関数
@@ -3116,6 +3116,7 @@ function drawFog(ctx, canvas) {
 
 
 init();
+
 
 
 

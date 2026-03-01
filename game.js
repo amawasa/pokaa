@@ -373,7 +373,7 @@ function drawTitleScreen() {
   ctx.fillStyle = 'white';
   ctx.textAlign = 'center';
 
-  ctx.font = '48px Arial';
+  ctx.font = '30px Arial';
   ctx.fillText('ローグライク・サバイバー', canvas.width / 2, 180);
 
   ctx.font = '28px Arial';
@@ -3116,6 +3116,7 @@ function drawFog(ctx, canvas) {
 
 
 init();
+
 
 
 

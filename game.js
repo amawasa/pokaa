@@ -374,7 +374,7 @@ function drawTitleScreen() {
   ctx.textAlign = 'center';
 
   ctx.font = '48px Arial';
-  ctx.fillText('EAZYMORD', canvas.width / 2, 180);
+  ctx.fillText('ローグライク・サバイバー', canvas.width / 2, 180);
 
   ctx.font = '28px Arial';
   ctx.fillText('NORMAL MODE', canvas.width / 2, 300);
@@ -3116,6 +3116,7 @@ function drawFog(ctx, canvas) {
 
 
 init();
+
 
 
 

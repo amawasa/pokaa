@@ -8,7 +8,7 @@ const BULLET_QUEEN_COOLDOWN = 1.5; // BulletQueenBossの弾発射間隔 (1.5秒)
 const TELEPORT_COOLDOWN = 3; // TeleportHunterBossのテレポート間隔 (3秒)   
 const TELEPORT_WARNING_FRAMES = 1; // テレポート警告線を表示する時間 (1秒)
 const SLIDE_INERTIA = 0.97; // 慣性力（スライディング時の減速の弱さ）
-const SLIDE_INPUT_CORRECTION = 0.02; // 慣性力への入力補正の割合
+const SLIDE_INPUT_CORRECTION = 0.016; // 慣性力への入力補正の割合
 // ゲーム状態フラグ
 let isGameOver = false;
 //ゲームモード設定
@@ -609,7 +609,7 @@ function updateEvents(deltaTime, gameTime) {
             currentEventRemaining = nextEvent.time;
             currentEvent = nextEvent.name;
 
-            console.log(`[EVENT START] ${currentEvent} | Duration: ${currentEventRemaining.toFixed(2)}s`);
+          
 
             // 発動演出
             const overlay = document.getElementById('event-animation-overlay');
@@ -629,8 +629,6 @@ function updateEvents(deltaTime, gameTime) {
     if (!bossAlive && currentEventRemaining > 0) {
         currentEventRemaining -= deltaTime;
 
-        // 毎フレーム残り時間を表示
-        console.log(`[EVENT RUNNING] ${currentEvent} | Remaining: ${currentEventRemaining.toFixed(2)}s`);
 
         if (currentEventRemaining <= 0) {
             // イベント終了時のリセット
@@ -1061,7 +1059,7 @@ case 12: // ドローン (Drone)
 function spawnEnemy(typeOverride, startX, startY) {
   let type;
   if (typeOverride) {
-    type = ENEMY_TYPES.find(t => t.name === typeOverride);
+    type = ENEMY_TYPES.find(t => t.type === typeOverride);
   } else {
     let availableTypes = ENEMY_TYPES.filter(t => t.time <= gameTime && t.type !== 'boss' && t.name !== 'Reaper' && !t.type.includes('Boss'));
     
@@ -1783,12 +1781,24 @@ if (enemySpeedMult > 0) {
 
   // --- 敵移動 ---
   enemies.forEach(e => {
-
+console.log("ENEMY CHECK", {
+  type: e.type,
+  name: e.name,
+  state: e.state,
+  cd: e.cd
+});
     const dist = Math.hypot(player.x - e.x, player.y - e.y);
     const angle = Math.atan2(player.y - e.y, player.x - e.x);
 
     e.cd = (e.cd || 0) - deltaTime;
     const moveSpeed = e.speed * enemySpeedMult * deltaTime;
+
+
+const dx = player.x - e.x;
+const dy = player.y - e.y;
+console.log("type:", e.type);
+// 特殊な敵の動作
+
 
     // === ボス共通 ===
     if (e.type.includes('Boss') || e.name === 'Reaper') {
@@ -2138,49 +2148,6 @@ e.tpTimer ??= 0;  // これで未定義なら 0 に初期化
     }
 
 
-      // 特殊な敵の動作
-      if (e.type === 'shooter' || e.type === 'mage') {
-        const SHOOT_RANGE = 300;
-        const PADDING = 50;
-
-        if (dist > SHOOT_RANGE) {
-          e.x += Math.cos(angle) * moveSpeed;
-          e.y += Math.sin(angle) * moveSpeed;
-          e.state = 'move';
-        } else if (dist < SHOOT_RANGE - PADDING) {
-          let awayAngle = angle + Math.PI;
-          e.x += Math.cos(awayAngle) * moveSpeed * 0.5;
-          e.y += Math.sin(awayAngle) * moveSpeed * 0.5;
-          e.state = 'retreat';
-        } else {
-          e.state = 'idle';
-          let shootCD = e.type === 'shooter' ? 90 : 60;
-          if (e.cd % shootCD === 0) { fireEnemyBullet(e); }
-        }
-        return;
-      }
-
-      if (e.type === 'charger') {
-        const CHARGE_DELAY = 90;
-        const CHARGE_SPEED = moveSpeed * 4;
-
-        if (e.state === 'move' && e.cd > CHARGE_DELAY) {
-          e.chargeAngle = angle;
-          e.state = 'charge';
-          e.cd = 0;
-        } else if (e.state === 'charge' && e.cd < 60) {
-          e.x += Math.cos(e.chargeAngle) * CHARGE_SPEED;
-          e.y += Math.sin(e.chargeAngle) * CHARGE_SPEED;
-        } else if (e.state === 'charge' && e.cd >= 60) {
-          e.state = 'move';
-          e.cd = 0;
-        } else {
-          e.x += Math.cos(angle) * moveSpeed;
-          e.y += Math.sin(angle) * moveSpeed;
-        }
-        return;
-      }
-
     // --- TP処理 ---
     const distToPlayer = Math.hypot(player.x - e.x, player.y - e.y);
     if (distToPlayer >= 12) {
@@ -2199,7 +2166,174 @@ e.tpTimer ??= 0;  // これで未定義なら 0 に初期化
   }
 
 
+}
+
+
+
+if (e.type === 'shooter' || e.type === 'mage') {
+
+  const angleToPlayer = Math.atan2(player.y - e.y, player.x - e.x);
+
+  const SHOOT_RANGE = 300;
+  const PADDING = 50;
+
+  e.shootTimer ??= 0;
+  e.shootTimer += deltaTime;
+
+  e.patternTimer ??= 0;
+  e.patternTimer += deltaTime;
+
+  const inRange = dist <= SHOOT_RANGE && dist >= SHOOT_RANGE - PADDING;
+
+  // =========================
+  // 射撃間隔（完全差別化）
+  // =========================
+  const shootInterval =
+    e.type === 'shooter'
+      ? (inRange ? 1.4 : 2.8)   // sniperは遅め・安定
+      : (inRange ? 0.9 : 2.2);  // mageは速め・圧力型
+
+  // =========================
+  // 移動AI（共通）
+  // =========================
+  if (dist > SHOOT_RANGE) {
+    e.x += Math.cos(angle) * moveSpeed;
+    e.y += Math.sin(angle) * moveSpeed;
+    e.state = 'move';
+  }
+
+  else if (dist < SHOOT_RANGE - PADDING) {
+    let awayAngle = angle + Math.PI;
+    e.x += Math.cos(awayAngle) * moveSpeed * 0.5;
+    e.y += Math.sin(awayAngle) * moveSpeed * 0.5;
+    e.state = 'retreat';
+  }
+
+  else {
+    e.state = 'idle';
+  }
+
+  // =========================
+  // shooter（単発スナイプ）
+  // =========================
+  if (e.type === 'shooter') {
+
+    if (e.shootTimer >= shootInterval) {
+      fireEnemyBullet(e, true, angleToPlayer, 'normal', 50);
+      e.shootTimer = 0;
     }
+  }
+
+  // =========================
+  // mage（魔法・弾幕型）
+  // =========================
+  else if (e.type === 'mage') {
+
+    if (e.shootTimer >= shootInterval) {
+
+      const pattern = rnd(2);
+
+      if (pattern === 0) {
+        // 扇状弾（5発）
+        const num = 5;
+        const spread = rad(40);
+
+        for (let i = 0; i < num; i++) {
+          const a =
+            angleToPlayer +
+            (i - (num - 1) / 2) * (spread / (num - 1));
+
+          fireEnemyBullet(e, true, a, 'normal', 50);
+        }
+      }
+
+      else {
+        // 3way弾
+        fireEnemyBullet(e, true, angleToPlayer, 'normal', 50);
+        fireEnemyBullet(e, true, angleToPlayer + rad(12), 'normal', 50);
+        fireEnemyBullet(e, true, angleToPlayer - rad(12), 'normal', 50);
+      }
+
+      e.shootTimer = 0;
+    }
+
+    // 魔法の“溜め感”
+    e.patternTimer = 0;
+  }
+
+  return;
+}
+ if (e.type === 'charger') {
+
+  // 初期化
+  e.state ??= 'move';
+  e.cooldown ??= 0;
+  e.chargeTimer ??= 0;
+  e.lockAngle ??= 0;
+
+  const DETECT_RANGE = 120;   // プレイヤーを検知する距離
+  const PREP_TIME = 0.7;      // 停止時間（秒）
+  const CHARGE_TIME = 0.5;    // 突進時間
+  const CHARGE_SPEED = e.speed * 4;
+
+  const angleToPlayer = Math.atan2(player.y - e.y, player.x - e.x);
+
+  // =====================
+  // 通常状態
+  // =====================
+  if (e.state === 'move') {
+
+    e.x += Math.cos(angleToPlayer) * e.speed * enemySpeedMult * deltaTime;
+    e.y += Math.sin(angleToPlayer) * e.speed * enemySpeedMult * deltaTime;
+
+    // プレイヤーが近い → チャージ準備
+    if (dist < DETECT_RANGE) {
+      e.state = 'prep';
+      e.cooldown = 0;
+    }
+  }
+
+  // =====================
+  // 準備（停止）
+  // =====================
+  else if (e.state === 'prep') {
+
+    e.cooldown += deltaTime;
+
+    // 停止（動かない）
+
+    if (e.cooldown === 0 || e.lockAngle === 0) {
+      e.lockAngle = angleToPlayer; // ここで方向固定
+    }
+
+    if (e.cooldown >= PREP_TIME) {
+      e.state = 'charge';
+      e.chargeTimer = 0;
+    }
+  }
+
+  // =====================
+  // チャージ（突進）
+  // =====================
+  else if (e.state === 'charge') {
+
+    e.chargeTimer += deltaTime;
+
+    e.x += Math.cos(e.lockAngle) * CHARGE_SPEED * deltaTime;
+    e.y += Math.sin(e.lockAngle) * CHARGE_SPEED * deltaTime;
+
+    if (e.chargeTimer >= CHARGE_TIME) {
+      e.state = 'move';
+      e.cooldown = 0;
+      e.chargeTimer = 0;
+      e.lockAngle = 0;
+    }
+  }
+
+  return;
+}
+
+
 
     // --- 通常敵 ---
 // --- 通常敵 ---
@@ -2317,7 +2451,7 @@ holyWaterBullets.forEach(b => {
 
 
 
-    drawFog(ctx, player, canvas);
+
 
   // 4.8. 隕石の着弾処理
   for (let i = meteorWarning.length - 1; i >= 0; i--) {
@@ -2889,6 +3023,8 @@ if (boss) {
     ctx.stroke();
   });
 
+drawFog(ctx, canvas);
+
 
   // 8. フローティングテキスト
   floaters.forEach(f => {
@@ -3085,39 +3221,32 @@ function canActivateSwep(w) {
   return true;
 }
 
-// fogActive = true のとき、プレイヤー周辺だけ見えるようにする
 function drawFog(ctx, canvas) {
     if (!fogActive) return;
 
-    console.log('drawFog called, fogActive =', fogActive);
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
 
-    const fogAlpha = 0.7;
-    const visibleRadius = 150;
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+    const fogCanvas = document.createElement('canvas');
+    fogCanvas.width = canvas.width;
+    fogCanvas.height = canvas.height;
+    const fogCtx = fogCanvas.getContext('2d');
 
-    // 1. 画面全体を黒で覆う
-    ctx.fillStyle = `rgba(0,0,0,${fogAlpha})`;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // ① 霧レイヤーだけに描く
+    fogCtx.fillStyle = 'rgba(50,50,50,1)';
+    fogCtx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
 
-    // 2. 画面中央をくり抜く
-    ctx.save();
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, visibleRadius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    // ② 霧だけをくり抜く
+    fogCtx.globalCompositeOperation = 'destination-out';
+    fogCtx.beginPath();
+    fogCtx.arc(cx, cy, 120, 0, Math.PI * 2);
+    fogCtx.fill();
 
-    // 3. 他の描画に影響を与えないように戻す
-    ctx.globalCompositeOperation = 'source-over';
+    // ③ 最後に本canvasへ合成
+    ctx.drawImage(fogCanvas, 0, 0);
 }
 
-
-
-
-
 init();
-
 
 
 

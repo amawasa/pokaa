@@ -8,7 +8,7 @@ const BULLET_QUEEN_COOLDOWN = 1.5; // BulletQueenBossの弾発射間隔 (1.5秒)
 const TELEPORT_COOLDOWN = 3; // TeleportHunterBossのテレポート間隔 (3秒)   
 const TELEPORT_WARNING_FRAMES = 1; // テレポート警告線を表示する時間 (1秒)
 const SLIDE_INERTIA = 0.97; // 慣性力（スライディング時の減速の弱さ）
-const SLIDE_INPUT_CORRECTION = 0.025; // 慣性力への入力補正の割合
+const SLIDE_INPUT_CORRECTION = 0.016; // 慣性力への入力補正の割合
 // ゲーム状態フラグ
 let isGameOver = false;
 //ゲームモード設定
@@ -93,7 +93,7 @@ const UPGRADES = [
   { id: 'axe', type: 'wep', name: '鉄の斧', icon: '🪓', maxLv: 8, 
     wepId: 2, range: 600,
     desc: '一撃が強い重い斧', 
-    stat: 'strength', power: 20 },
+    stat: 'strength', power: 30 },
 
   { id: 'cross', type: 'wep', name: '十字架', icon: '✝️', maxLv: 8,
     wepId: 3, range: 450,
@@ -171,10 +171,10 @@ const UPGRADES = [
   { id: 'maxhp', type: 'stat', name: '蠢く心臓', icon: '❤️', maxLv: 20, baseDesc: '最大HP', unit: '', apply: (p) => { p.maxHp += 20; p.hp += 20; }, val: 20 },
   { id: 'armor', type: 'stat', name: '錆びた鎧', icon: '🛡️', maxLv: 20, baseDesc: '被ダメージ軽減', unit: '', apply: (p) => p.armor += 1, val: 1 },
   { id: 'luck', type: 'stat', name: 'クローバー', icon: '🍀', maxLv: 20, baseDesc: '運気', unit: '%', apply: (p) => p.luck = Math.min(1.0, p.luck + 0.01), val: 1 },
-  { id: 'magnet', type: 'stat', name: '磁石', icon: '🧲', maxLv: 20, baseDesc: '回収範囲', unit: 'px', apply: (p) => p.magnet += 30, val: 30 },
+  { id: 'magnet', type: 'stat', name: '磁石', icon: '🧲', maxLv: 20, baseDesc: '回収範囲', unit: 'px', apply: (p) => p.magnet += 100, val: 30 },
   { id: 'amount', type: 'stat', name: '複写の輪', icon: '💍', maxLv: 20, baseDesc: '発射数', unit: '発', apply: (p) => p.amount += 1, val: 1 },
   { id: 'range', type: 'stat', name: 'スコープ', icon: '🔭', maxLv: 20, baseDesc: '攻撃射程', unit: '%', apply: (p) => p.rangeMult += 0.1, val: 10 },
-  { id: 'evasion', type: 'stat', name: 'マント', icon: '🥼', maxLv: 20, baseDesc: '回避率 (最大60%)', unit: '%', apply: (p) => p.evasion = Math.min(0.6, p.evasion + 0.03), val: 3 },
+  { id: 'evasion', type: 'stat', name: 'マント', icon: '🥼', maxLv: 20, baseDesc: '回避率 (最大60%)', unit: '%', apply: (p) => p.evasion = Math.min(0.6, p.evasion + 0.045), val: 3 },
   { id: 'regen', type: 'stat', name: '生命の珠', icon: '💚', maxLv: 10, baseDesc: 'HP自動回復', unit: '/秒', apply: (p) => p.regen += 1, val: 1 },
 
 
@@ -2185,16 +2185,13 @@ if (e.type === 'shooter' || e.type === 'mage') {
 
   const inRange = dist <= SHOOT_RANGE && dist >= SHOOT_RANGE - PADDING;
 
-  // =========================
-  // 射撃間隔（完全差別化）
-  // =========================
   const shootInterval =
     e.type === 'shooter'
-      ? (inRange ? 1.4 : 2.8)   // sniperは遅め・安定
-      : (inRange ? 0.9 : 2.2);  // mageは速め・圧力型
+      ? (inRange ? 1.4 : 2.8)
+      : (inRange ? 3.0 : 4.0);
 
   // =========================
-  // 移動AI（共通）
+  // 移動AI
   // =========================
   if (dist > SHOOT_RANGE) {
     e.x += Math.cos(angle) * moveSpeed;
@@ -2214,51 +2211,31 @@ if (e.type === 'shooter' || e.type === 'mage') {
   }
 
   // =========================
-  // shooter（単発スナイプ）
+  // shooter
   // =========================
   if (e.type === 'shooter') {
 
     if (e.shootTimer >= shootInterval) {
-      fireEnemyBullet(e, true, angleToPlayer, 'normal', 50);
+      fireEnemyBullet(e, false, angleToPlayer, 'normal', 50);
       e.shootTimer = 0;
     }
   }
 
   // =========================
-  // mage（魔法・弾幕型）
+  // mage（固定3way）
   // =========================
   else if (e.type === 'mage') {
 
     if (e.shootTimer >= shootInterval) {
 
-      const pattern = rnd(2);
-
-      if (pattern === 0) {
-        // 扇状弾（5発）
-        const num = 5;
-        const spread = rad(40);
-
-        for (let i = 0; i < num; i++) {
-          const a =
-            angleToPlayer +
-            (i - (num - 1) / 2) * (spread / (num - 1));
-
-          fireEnemyBullet(e, true, a, 'normal', 50);
-        }
-      }
-
-      else {
-        // 3way弾
-        fireEnemyBullet(e, true, angleToPlayer, 'normal', 50);
-        fireEnemyBullet(e, true, angleToPlayer + rad(12), 'normal', 50);
-        fireEnemyBullet(e, true, angleToPlayer - rad(12), 'normal', 50);
-      }
+      fireEnemyBullet(e, false, angleToPlayer, 'normal', 50);
+      fireEnemyBullet(e, false, angleToPlayer + rad(12), 'normal', 50);
+      fireEnemyBullet(e, false, angleToPlayer - rad(12), 'normal', 50);
 
       e.shootTimer = 0;
     }
 
-    // 魔法の“溜め感”
-    e.patternTimer = 0;
+    e.patternTimer += deltaTime;
   }
 
   return;

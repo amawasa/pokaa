@@ -1289,7 +1289,7 @@ function checkLevelUp() {
     while (player.exp >= player.nextExp) {
         player.exp -= player.nextExp;
         player.lv++;
-        player.nextExp = Math.floor(player.nextExp * 1.2) + 5;
+        player.nextExp = Math.floor(player.nextExp * 1.2) ;
         showLevelUpScreen();
         return;
     }

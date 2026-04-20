@@ -8,7 +8,7 @@ const BULLET_QUEEN_COOLDOWN = 1.5; // BulletQueenBossの弾発射間隔 (1.5秒)
 const TELEPORT_COOLDOWN = 3; // TeleportHunterBossのテレポート間隔 (3秒)   
 const TELEPORT_WARNING_FRAMES = 1; // テレポート警告線を表示する時間 (1秒)
 const SLIDE_INERTIA = 0.97; // 慣性力（スライディング時の減速の弱さ）
-const SLIDE_INPUT_CORRECTION = 0.06; // 慣性力への入力補正の割合
+const SLIDE_INPUT_CORRECTION = 0.06// 慣性力への入力補正の割合
 // ゲーム状態フラグ
 let isGameOver = false;
 //ゲームモード設定
@@ -328,24 +328,25 @@ const barrier = 0;
 
 
 const GAME_EVENTS = [
-      {id:1,time: 100, name: '', effect: () => {  }, color: 'rgba(0, 0, 0, 0)' },
-    {id: 2,time: 60, name: '赤い月', effect: () => { eventModifiers.enemyDmgMult = 1.5; }, color: 'rgba(255, 0, 0, 0.9)' },
-    { id: 3,time: 60, name: '濃い霧', effect: () => { fogActive = true; console.log('fog ON');  }, color: 'rgba(50, 50, 50, 0.9)' },
-    { id: 4,time: 1, name: '濃い霧', effect: () => { fogActive = false; }, color: 'rgba(0, 0, 0, 0)' },
-    { id: 5,time: 60, name: '隕石の雨', effect: () => { /* updateで対応 */ }, color: 'rgba(150, 50, 0, 0.9)' },
-    {  id: 6,time: 60, name: '氷河の海', effect: () => { player.isSliding = true; }, color: 'rgba(0, 100, 255, 0.9)' },
-    {  id: 7,time: 1, name: '氷河の海', effect: () => { player.isSliding = false; }, color: 'rgba(0, 0, 0, 0)' },
-    { id : 8,time: 60, name: '鉛の雨', effect: () => { /* スポーンで対応 */ }, color: 'rgba(100, 100, 100, 0.9)' },
-    { id : 9,time: 10, name: '開戦', effect: () => { enemies = []; spawnBoss('BulletQueen'); bossActive = true; }, color: 'rgba(255, 100, 100, 0.9)' },
-    { id : 10,time: 60, name: '四面楚歌', effect: () => { spawnAmbush(150); }, color: 'rgba(50, 50, 50, 0.9)' },
-    { id : 11,time: 10, name: '高速襲撃', effect: () => { enemies = []; spawnBoss('TeleportHunter'); bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
-    {id : 12, time: 1, name: '時の歪み', effect: () => { eventModifiers.cdMult = 0.5; }, color: 'rgba(100, 255, 100, 0.9)' },
-  { id : 13,time: 10, name: 'ボスラッシュ', effect: () => { enemies = []; spawnBoss('TeleportHunter'),spawnBoss('ArcMage');bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
-  { id : 14,time: 10, name: 'ボスラッシュ2', effect: () => { enemies = []; spawnBoss('TeleportHunter'),spawnBoss('BulletQueen');bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
+    {id : 1 ,time: 100, name: '', effect: () => { }, color: 'rgba(0, 0, 0, 0)' },
+    {id : 2 ,time: 60, name: '赤い月', effect: () => { eventModifiers.enemyDmgMult = 1.5; }, color: 'rgba(255, 0, 0, 0.9)' },
+    {id : 3 ,time: 60, name: '濃い霧', effect: () => { fogActive = true; }, color: 'rgba(50, 50, 50, 0.9)' },
+    {id : 4 ,time: 1, name: '濃い霧', effect: () => { fogActive = false; }, color: 'rgba(0, 0, 0, 0)' },
+    {id : 5 ,time: 60, name: '隕石の雨', effect: () => { /* updateで対応 */ }, color: 'rgba(150, 50, 0, 0.9)' },
+    {id : 6 ,time: 60, name: '氷河の海', effect: () => { player.isSliding = true; }, color: 'rgba(0, 100, 255, 0.9)' },
+    {id : 7 ,time: 1, name: '氷河の海', effect: () => { player.isSliding = false; }, color: 'rgba(0, 0, 0, 0)' },
+    {id : 8 ,time: 60, name: '鉛の雨', effect: () => { /* スポーンで対応 */ }, color: 'rgba(100, 100, 100, 0.9)' },
+    {id : 9 ,time: 10, name: '開戦', effect: () => { enemies = []; spawnBoss('BulletQueen'); bossActive = true; }, color: 'rgba(255, 100, 100, 0.9)' },
+    {id : 10,time: 60, name: '四面楚歌', effect: () => { spawnAmbush(150); }, color: 'rgba(50, 50, 50, 0.9)' },
+    {id : 11,time: 10, name: '高速襲撃', effect: () => { enemies = []; spawnBoss('TeleportHunter'); bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
+    {id : 12,time: 1, name: '時の歪み', effect: () => { eventModifiers.cdMult = 0.5; }, color: 'rgba(100, 255, 100, 0.9)' },
+    {id : 13,time: 10, name: 'ボスラッシュ', effect: () => { enemies = []; spawnBoss('TeleportHunter'),spawnBoss('ArcMage');bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
+    {id : 14,time: 10, name: 'ボスラッシュ2', effect: () => { enemies = []; spawnBoss('TeleportHunter'),spawnBoss('BulletQueen');bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
     {id : 17,time: 10, name: '魔導の嵐', effect: () => { enemies = []; spawnBoss('ArcMage'); bossActive = true; }, color: 'rgba(0, 150, 255, 0.9)' },
     {id : 16,time: 70, name: '闇の侵攻', effect: () => { ENEMY_TYPES.forEach(t => t.speed *= 1.1); }, color: 'rgba(0, 0, 0, 0.9)' },
-    {id : 15, time: 80, name: '天上の祝福', effect: () => { eventModifiers.expMult = 2.0; }, color: 'rgba(255, 255, 255, 0.9)' },
+    {id : 15,time: 80, name: '天上の祝福', effect: () => { eventModifiers.expMult = 2.0; }, color: 'rgba(255, 255, 255, 0.9)' },
 ];
+
 //ゲームスタート関数
 function startGame(mode) {
   selectedMode = mode;
@@ -467,7 +468,7 @@ function showFloat(x, y, txt, col) {
 function gameOver(win = false) {
     isGameOver = true;
     isPaused = true;
-console.log(player.Pgot);
+
 
     const minutes = Math.floor(gameTime / 60);
     const seconds = Math.floor(gameTime % 60);
@@ -632,7 +633,6 @@ function updateEvents(deltaTime, gameTime) {
 
         if (currentEventRemaining <= 0) {
             // イベント終了時のリセット
-            console.log(`[EVENT END] ${currentEvent}`);
             switch (currentEvent) {
                 case '赤い月': eventModifiers.enemyDmgMult = 1.0; break;
                 case '時の歪み': eventModifiers.cdMult = 1.0; break;
@@ -703,11 +703,11 @@ function lightningEffect(target, baseDmg, maxChains) {
 
   while (currentTarget && chainCount <= maxChains) {
 
-    // ✅ ダメージ（減衰あり）
+    //ダメージ（減衰あり）
     takeDamage(currentTarget, dmg);
     dmg *= 0.85; // 連鎖ごとに15%減衰
 
-    // ✅ 雷エフェクト（即時）
+    //雷エフェクト（即時）
     for (let i = 0; i < 3; i++) {
       floaters.push({
         x: currentTarget.x + rnd(currentTarget.size * 2) - currentTarget.size,
@@ -720,7 +720,7 @@ function lightningEffect(target, baseDmg, maxChains) {
 
     if (chainCount >= maxChains) break;
 
-    // ✅ 次のターゲット探索（レンジ依存）
+    //次のターゲット探索（レンジ依存）
     let nextTarget = null;
     let minD = Infinity;
 
@@ -745,7 +745,7 @@ function lightningEffect(target, baseDmg, maxChains) {
 
     if (!nextTarget) break;
 
-    // ✅ 視覚用の稲妻ライン（0.15秒）
+    //視覚用の稲妻ライン（0.15秒）
     bullets.push({
       type: 'lightningChain',
       x: currentTarget.x,
@@ -789,7 +789,7 @@ function fireSpecialWeapon(w) {
   }
 }
 
-// ⭐ 武器の発射ロジック（全武器ロジック統合）
+//武器の発射ロジック（全武器ロジック統合）
 function fireWeapon(w) {
   const count = 1 + player.amount;
   const baseDmg = 10;
@@ -1059,7 +1059,7 @@ case 12: // ドローン (Drone)
 function spawnEnemy(typeOverride, startX, startY) {
   let type;
   if (typeOverride) {
-    type = ENEMY_TYPES.find(t => t.type === typeOverride);
+    type = ENEMY_TYPES.find(t => t.name === typeOverride);
   } else {
     let availableTypes = ENEMY_TYPES.filter(t => t.time <= gameTime && t.type !== 'boss' && t.name !== 'Reaper' && !t.type.includes('Boss'));
     
@@ -1137,16 +1137,26 @@ function fireEnemyBullet(e, isBoss=false, angle=0, type='normal', speedMult=1.0)
 
 // 雑魚敵をプレイヤーの周囲に大量に召喚
 function spawnAmbush(count, self) {
+  console.log("[spawnAmbush] ENTER", { count, self });
     const radius = 500; // 円の半径
     const center = self ?? player; // selfが渡されなければplayer中心
-
+    console.log("[spawnAmbush] center resolved", {
+        centerExists: !!center,
+        x: center?.x,
+        y: center?.y
+    });
+    console.log("[spawnAmbush] start loop (Bat)");
     // --- 1. 最初の雑魚召喚 ---
     for (let i = 0; i < count; i++) {
+      
         const angle = Math.random() * Math.PI * 2;
         const x = center.x + Math.cos(angle) * radius;
         const y = center.y + Math.sin(angle) * radius;
+        console.warn("座標不正", { x, y });
+        console.log("[spawnAmbush] Bat spawn", { i, x, y });
         spawnEnemy('Bat', x, y);
     }
+    console.log("[spawnAmbush] Bat wave complete");
     showFloat(center.x, center.y, "Ambush!", "red");
 
     // --- 2. 10秒後にSkeleton召喚 ---
@@ -1289,7 +1299,7 @@ function checkLevelUp() {
     while (player.exp >= player.nextExp) {
         player.exp -= player.nextExp;
         player.lv++;
-        player.nextExp = Math.floor(player.nextExp * 1.2) ;
+        player.nextExp = Math.floor(player.nextExp * 1.2) + 5;
         showLevelUpScreen();
         return;
     }
@@ -1601,7 +1611,7 @@ if (b.type === 'boomerang') {
   if (b.flyTime === undefined) b.flyTime = 0;
   b.flyTime += deltaTime;
 
-  // ✅ 最初の 0.35 秒は必ず前進
+  //最初の 0.35 秒は必ず前進
   if (!b.return && b.flyTime > 1) {
     b.return = true;
   }
@@ -1616,7 +1626,7 @@ if (b.type === 'boomerang') {
   b.x += b.vx * deltaTime;
   b.y += b.vy * deltaTime;
 
-  // ✅ プレイヤーに戻ったら消滅
+  //プレイヤーに戻ったら消滅
   if (
     b.return &&
     Math.hypot(b.x - player.x, b.y - player.y) < player.size
@@ -1781,12 +1791,6 @@ if (enemySpeedMult > 0) {
 
   // --- 敵移動 ---
   enemies.forEach(e => {
-console.log("ENEMY CHECK", {
-  type: e.type,
-  name: e.name,
-  state: e.state,
-  cd: e.cd
-});
     const dist = Math.hypot(player.x - e.x, player.y - e.y);
     const angle = Math.atan2(player.y - e.y, player.x - e.x);
 
@@ -1796,7 +1800,6 @@ console.log("ENEMY CHECK", {
 
 const dx = player.x - e.x;
 const dy = player.y - e.y;
-console.log("type:", e.type);
 // 特殊な敵の動作
 
 
@@ -2328,8 +2331,8 @@ if (dist < player.size + e.size) {
       }
     }
 
-  }); // ✅ forEach 正常終了
-} // ✅ enemySpeedMult > 0 正常終了
+  }); //forEach 正常終了
+} //enemySpeedMult > 0 正常終了
 
 // 4.5. 敵弾の移動と判定（完全安全版）
 for (let i = enemyBullets.length - 1; i >= 0; i--) {
@@ -2585,7 +2588,7 @@ for (let i = floaters.length - 1; i >= 0; i--) {
 }
 
 //============================================================
-// --- 描画処理 (プレイヤー描画強化、ニンニク初期オーラ描画抑止) ---ここまで秒変換
+// --- 描画処理 (プレイヤー描画強化、ニンニク初期オーラ描画抑止) ---
 function draw() {
     if (isGameOver) {
         drawGameOverScreen();
@@ -3175,7 +3178,6 @@ function takePlayerDamage(damage) {
 
 
 function updateSpecialWeapons(deltaTime) {
-  console.log("updateSpecialWeapons called", deltaTime);
   player.sweapons.forEach(w => {
 
     if (w.cd > 0) {
@@ -3224,13 +3226,5 @@ function drawFog(ctx, canvas) {
 }
 
 init();
-
-
-
-
-
-
-
-
 
 

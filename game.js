@@ -164,16 +164,14 @@ const UPGRADES = [
 
  
   // 以下は初期値維持で倍率や固定値を適用
-  { id: 'cd', type: 'stat', name: '古びた砂時計', icon: '⌛️', maxLv: 20, baseDesc: 'クールタイム削減', unit: '%', apply: (p) => p.cdMult *= 0.9, val: -10 },
-  { id: 'area', type: 'stat', name: 'ロウソク', icon: '🕯️', maxLv: 20, baseDesc: '攻撃範囲', unit: '%', apply: (p) => p.areaMult += 0.15, val: 15 },
-  { id: 'projSpeed', type: 'stat', name: '磨かれた水晶', icon: '🔮', maxLv: 20, baseDesc: '弾速', unit: '%', apply: (p) => p.projSpeedMult += 0.1, val: 10 },
+  { id: 'cd', type: 'stat', name: '古びた砂時計', icon: '⌛️', maxLv: 20, baseDesc: 'クールタイム削減', unit: '%', apply: (p) => p.cdMult *= 0.85, val: -10 },
+  { id: 'projSpeed', type: 'stat', name: '磨かれた水晶', icon: '🔮', maxLv: 20, baseDesc: '弾速', unit: '%', apply: (p) => { p.projSpeedMult += 0.07; p.rangeMult += 0.3; },val: 10 },
   { id: 'speed', type: 'stat', name: '天使の翼', icon: '🪽', maxLv: 20, baseDesc: '移動速度', unit: '%', apply: (p) => p.speed *= 1.1, val: 10 },
   { id: 'maxhp', type: 'stat', name: '蠢く心臓', icon: '❤️', maxLv: 20, baseDesc: '最大HP', unit: '', apply: (p) => { p.maxHp += 20; p.hp += 20; }, val: 20 },
   { id: 'armor', type: 'stat', name: '錆びた鎧', icon: '🛡️', maxLv: 20, baseDesc: '被ダメージ軽減', unit: '', apply: (p) => p.armor += 1, val: 1 },
   { id: 'luck', type: 'stat', name: 'クローバー', icon: '🍀', maxLv: 20, baseDesc: '運気', unit: '%', apply: (p) => p.luck = Math.min(1.0, p.luck + 0.01), val: 1 },
   { id: 'magnet', type: 'stat', name: '磁石', icon: '🧲', maxLv: 20, baseDesc: '回収範囲', unit: 'px', apply: (p) => p.magnet += 100, val: 30 },
   { id: 'amount', type: 'stat', name: '複写の輪', icon: '💍', maxLv: 20, baseDesc: '発射数', unit: '発', apply: (p) => p.amount += 1, val: 1 },
-  { id: 'range', type: 'stat', name: 'スコープ', icon: '🔭', maxLv: 20, baseDesc: '攻撃射程', unit: '%', apply: (p) => p.rangeMult += 0.1, val: 10 },
   { id: 'evasion', type: 'stat', name: 'マント', icon: '🥼', maxLv: 20, baseDesc: '回避率 (最大60%)', unit: '%', apply: (p) => p.evasion = Math.min(0.6, p.evasion + 0.045), val: 3 },
   { id: 'regen', type: 'stat', name: '生命の珠', icon: '💚', maxLv: 10, baseDesc: 'HP自動回復', unit: '/秒', apply: (p) => p.regen += 1, val: 1 },
 
@@ -328,7 +326,7 @@ const barrier = 0;
 
 
 const GAME_EVENTS = [
-    {id : 1 ,time: 100, name: '', effect: () => { }, color: 'rgba(0, 0, 0, 0)' },
+    {id : 1 ,time: 100, name: '', effect: () => {  }, color: 'rgba(0, 0, 0, 0)' },
     {id : 2 ,time: 60, name: '赤い月', effect: () => { eventModifiers.enemyDmgMult = 1.5; }, color: 'rgba(255, 0, 0, 0.9)' },
     {id : 3 ,time: 60, name: '濃い霧', effect: () => { fogActive = true; }, color: 'rgba(50, 50, 50, 0.9)' },
     {id : 4 ,time: 1, name: '濃い霧', effect: () => { fogActive = false; }, color: 'rgba(0, 0, 0, 0)' },
@@ -2170,32 +2168,6 @@ e.tpTimer ??= 0;  // これで未定義なら 0 に初期化
     }
 
 
-    // --- TP処理 ---
-// --- TP処理 ---
-const distToPlayer = Math.hypot(player.x - e.x, player.y - e.y);
-
-const TP_DISTANCE = 12;
-const TP_DELAY = 3; // 秒
-
-if (distToPlayer > TP_DISTANCE) {
-    // 範囲外ならタイマー加算a
-    e.tpTimer += deltaTime;
-
-    if (e.tpTimer >= TP_DELAY) {
-        const tpRadius = 4;
-        const tpAngle = Math.random() * Math.PI * 2;
-
-        // プレイヤー付近にワープ
-        e.x = player.x + Math.cos(tpAngle) * tpRadius;
-        e.y = player.y + Math.sin(tpAngle) * tpRadius;
-
-        e.tpTimer = 0;
-    }
-
-} else {
-    // 範囲内に戻ったらリセット
-    e.tpTimer = 0;
-}
     return;
   }
 
@@ -3257,5 +3229,4 @@ function drawFog(ctx, canvas) {
 }
 
 init();
-
 

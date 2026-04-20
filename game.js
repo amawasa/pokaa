@@ -239,7 +239,7 @@ function initPlayer(mode = 'normal') {
     evasion: 0.0,
 
     invincibleTimer: 0.1,
-    weapons: [{ id: 0, lv: 1, cd: 0 }],
+    weapons: [{ id: 5, lv: 1, cd: 0 }],
     sweapons: [],
     statLv: {},
 
@@ -2174,7 +2174,7 @@ e.tpTimer ??= 0;  // これで未定義なら 0 に初期化
 // --- TP処理 ---
 const distToPlayer = Math.hypot(player.x - e.x, player.y - e.y);
 
-const TP_DISTANCE = 800;
+const TP_DISTANCE = 12;
 const TP_DELAY = 3; // 秒
 
 if (distToPlayer > TP_DISTANCE) {

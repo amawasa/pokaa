@@ -2152,19 +2152,31 @@ e.tpTimer ??= 0;  // これで未定義なら 0 に初期化
 
 
     // --- TP処理 ---
-    const distToPlayer = Math.hypot(player.x - e.x, player.y - e.y);
-    if (distToPlayer >= 12) {
-        e.tpTimer += deltaTime;
-        if (e.tpTimer >= 10) {
-            const tpRadius = 3;
-            const tpAngle = Math.random() * Math.PI * 2;
-            e.x += Math.cos(tpAngle) * tpRadius;
-            e.y += Math.sin(tpAngle) * tpRadius;
-            e.tpTimer = 0;
-        }
-    } else {
+// --- TP処理 ---
+const distToPlayer = Math.hypot(player.x - e.x, player.y - e.y);
+
+const TP_DISTANCE = 12;
+const TP_DELAY = 3; // 秒
+
+if (distToPlayer > TP_DISTANCE) {
+    // 範囲外ならタイマー加算a
+    e.tpTimer += deltaTime;
+
+    if (e.tpTimer >= TP_DELAY) {
+        const tpRadius = 4;
+        const tpAngle = Math.random() * Math.PI * 2;
+
+        // プレイヤー付近にワープ
+        e.x = player.x + Math.cos(tpAngle) * tpRadius;
+        e.y = player.y + Math.sin(tpAngle) * tpRadius;
+
         e.tpTimer = 0;
     }
+
+} else {
+    // 範囲内に戻ったらリセット
+    e.tpTimer = 0;
+}
     return;
   }
 

@@ -93,7 +93,7 @@ const UPGRADES = [
   { id: 'axe', type: 'wep', name: '鉄の斧', icon: '🪓', maxLv: 8, 
     wepId: 2, range: 600,
     desc: '一撃が強い重い斧', 
-    stat: 'strength', power: 30 },
+    stat: 'strength', power: 0 },
 
   { id: 'cross', type: 'wep', name: '十字架', icon: '✝️', maxLv: 8,
     wepId: 3, range: 450,
@@ -239,7 +239,7 @@ function initPlayer(mode = 'normal') {
     evasion: 0.0,
 
     invincibleTimer: 0.1,
-    weapons: [{ id: 0, lv: 1, cd: 0 }],
+    weapons: [{ id: 5, lv: 1, cd: 0 }],
     sweapons: [],
     statLv: {},
 
@@ -276,7 +276,7 @@ let player = {
   dmgMult: 1.0, areaMult: 1.0, cdMult: 1.0, amount: 0, projSpeedMult: 1.0,
   rangeMult: 1.0, evasion: 0.0, 
   invincibleTimer: 0.1, 
-  weapons: [ {id:5, lv:1, cd:0}],
+  weapons: [ ],
    sweapons: [
     // 例:
     
@@ -340,9 +340,10 @@ const GAME_EVENTS = [
     {id : 10,time: 60, name: '四面楚歌', effect: () => { spawnAmbush(150); }, color: 'rgba(50, 50, 50, 0.9)' },
     {id : 11,time: 10, name: '高速襲撃', effect: () => { enemies = []; spawnBoss('TeleportHunter'); bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
     {id : 12,time: 1, name: '時の歪み', effect: () => { eventModifiers.cdMult = 0.5; }, color: 'rgba(100, 255, 100, 0.9)' },
-    {id : 13,time: 10, name: 'ボスラッシュ', effect: () => { enemies = []; spawnBoss('TeleportHunter'),spawnBoss('ArcMage');bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
-    {id : 14,time: 10, name: 'ボスラッシュ2', effect: () => { enemies = []; spawnBoss('TeleportHunter'),spawnBoss('BulletQueen');bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
-    {id : 17,time: 10, name: '魔導の嵐', effect: () => { enemies = []; spawnBoss('ArcMage'); bossActive = true; }, color: 'rgba(0, 150, 255, 0.9)' },
+    {id : 13,time: 10, name: '魔導の嵐', effect: () => { enemies = []; spawnBoss('ArcMage'); bossActive = true; }, color: 'rgba(0, 150, 255, 0.9)' },
+    {id : 14,time: 10, name: 'ボスラッシュ', effect: () => { enemies = []; spawnBoss('TeleportHunter'),spawnBoss('ArcMage');bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
+    {id : 15,time: 10, name: 'ボスラッシュ2', effect: () => { enemies = []; spawnBoss('TeleportHunter'),spawnBoss('BulletQueen');bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
+    
     {id : 16,time: 70, name: '闇の侵攻', effect: () => { ENEMY_TYPES.forEach(t => t.speed *= 1.1); }, color: 'rgba(0, 0, 0, 0.9)' },
     {id : 15,time: 80, name: '天上の祝福', effect: () => { eventModifiers.expMult = 2.0; }, color: 'rgba(255, 255, 255, 0.9)' },
 ];
@@ -838,7 +839,7 @@ case 2: { // 斧 (Axe)
         vx: Math.cos(currentMoveAngle) * initialSpeed, 
         vy: Math.sin(currentMoveAngle) * initialSpeed, 
         life: 1, 
-        dmg: dmg * 1.5, 
+        dmg: dmg * 5, 
         size: 16 * player.areaMult,
         pierce: 2, 
         rot: 0,
@@ -876,7 +877,7 @@ case 3: // 十字架 (Cross)
         } else {
              // すでに存在する場合は範囲と威力を更新（クールダウンは単なるインターバルとして機能）
             let garlic = bullets.find(b => b.type === 'garlic');
-            garlic.size = 50 + w.lv * 15 * player.areaMult;
+            garlic.size = 100 + w.lv * 30 * player.areaMult;
             garlic.dmg = dmg;
         }
         break;
@@ -904,7 +905,7 @@ case 5: { // SMG
       vx: Math.cos(angle) * projSpeed * 1.2,
       vy: Math.sin(angle) * projSpeed * 1.2,
       life: 0.6,
-      dmg: dmg*0.7,
+      dmg: dmg*0.55,
       size: 3,
       pierce: 0,
     });
@@ -915,14 +916,32 @@ case 5: { // SMG
 
 
 
-    case 6: // 炎の杖 (FireWand)
-        if(target) {
-            let angle = Math.atan2(target.y - player.y, target.x - player.x);
-            let fireSpeed = projSpeed * 1.2;
-            let explosionSize = 50 + w.lv * 10 * player.areaMult;
-            bullets.push({ type: 'fire', x: player.x, y: player.y, vx: Math.cos(angle)*fireSpeed, vy: Math.sin(angle)*fireSpeed, life: 0.66, dmg: dmg, size: 6, pierce: 1, explosionSize: explosionSize });
+case 6: // 炎の杖 (FireWand)
+    if (target) {
+        let baseAngle = Math.atan2(target.y - player.y, target.x - player.x);
+        let fireSpeed = projSpeed * 1.2;
+        let explosionSize = 50 + w.lv * 10 * player.areaMult;
+
+        const spread = rad(2); // ±2度
+
+        for (let i = -1; i <= 1; i++) {
+            let angle = baseAngle + spread * i;
+
+            bullets.push({
+                type: 'fire',
+                x: player.x,
+                y: player.y,
+                vx: Math.cos(angle) * fireSpeed,
+                vy: Math.sin(angle) * fireSpeed,
+                life: 0.66,
+                dmg: dmg,
+                size: 4.5,
+                pierce: 1,
+                explosionSize: explosionSize
+            });
         }
-        break;
+    }
+    break;
 case 7: { // Holy Water Bottle
 
     const nearest = getNearestEnemy();
@@ -1299,7 +1318,7 @@ function checkLevelUp() {
     while (player.exp >= player.nextExp) {
         player.exp -= player.nextExp;
         player.lv++;
-        player.nextExp = Math.floor(player.nextExp * 1.2) + 5;
+        player.nextExp = Math.floor(player.nextExp * 1.2) +2;
         showLevelUpScreen();
         return;
     }

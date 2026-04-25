@@ -10,6 +10,7 @@ const TELEPORT_WARNING_FRAMES = 1; // テレポート警告線を表示する時
 const SLIDE_INERTIA = 0.97; // 慣性力（スライディング時の減速の弱さ）
 const SLIDE_INPUT_CORRECTION = 0.06// 慣性力への入力補正の割合
 // ゲーム状態フラグ
+let afterImages = [];//残像用
 let isGameOver = false;
 //ゲームモード設定
 let gameState = 'title'; // 'title' | 'playing'
@@ -19,6 +20,7 @@ let currentEventIndex = -2;   // 現在のイベントID
 let currentEventRemaining = 0; // 現在のイベント残り時間
 // ゲームオーバー情報保存用
 let gameOverData = {};
+let godPhase2Event = null;
 
 
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
@@ -172,7 +174,7 @@ const UPGRADES = [
   { id: 'luck', type: 'stat', name: 'クローバー', icon: '🍀', maxLv: 20, baseDesc: '運気', unit: '%', apply: (p) => p.luck = Math.min(1.0, p.luck + 0.01), val: 1 },
   { id: 'magnet', type: 'stat', name: '磁石', icon: '🧲', maxLv: 20, baseDesc: '回収範囲', unit: 'px', apply: (p) => p.magnet += 100, val: 30 },
   { id: 'amount', type: 'stat', name: '複写の輪', icon: '💍', maxLv: 20, baseDesc: '発射数', unit: '発', apply: (p) => p.amount += 1, val: 1 },
-  { id: 'evasion', type: 'stat', name: 'マント', icon: '🥼', maxLv: 20, baseDesc: '回避率 (最大60%)', unit: '%', apply: (p) => p.evasion = Math.min(0.6, p.evasion + 0.045), val: 3 },
+  { id: 'evasion', type: 'stat', name: 'マント', icon: '🥼', maxLv: 20, baseDesc: '回避率 (最大60%)', unit: '%', apply: (p) => p.evasion = Math.min(0.6, p.evasion + 0.05), val: 3 },
   { id: 'regen', type: 'stat', name: '生命の珠', icon: '💚', maxLv: 10, baseDesc: 'HP自動回復', unit: '/秒', apply: (p) => p.regen += 1, val: 1 },
 
 
@@ -191,11 +193,14 @@ const ENEMY_TYPES = [
   { time: 240,name: 'Splitter', hp: 60, speed: 60, size: 20, color: '#2196f3', exp: 8, type: 'splitter' }, 
   { time: 300,name: 'Mage',     hp: 100,speed: 70, size: 18, color: '#9c27b0', exp: 10, type: 'mage' }, 
   { time: 36000,name: 'Reaper',   hp: 9999,speed: 350,size: 30, color: '#000000', exp: 100, type: 'boss' },
-  { time: 42000, name: 'BulletQueen', hp: 25000, speed: 50, size: 40, color: '#ff69b4', exp: 1000, type: 'BulletQueenBoss' },
-  { time: 54000, name: 'TeleportHunter', hp: 28000, speed: 250, size: 35, color: '#ffff00', exp: 800, type: 'TeleportHunterBoss' },
-  { time: 66000, name: 'ArcMage', hp: 40000, speed: 300, size: 45, color: '#00ccff', exp: 1200, type: 'ArcMageBoss' }
+  { time: 42000, name: 'BulletQueen', hp: 40000, speed: 50, size: 40, color: '#ff69b4', exp: 1200, type: 'BulletQueenBoss' },
+  { time: 54000, name: 'TeleportHunter', hp: 44000, speed: 250, size: 35, color: '#ffff00', exp: 1400, type: 'TeleportHunterBoss' },
+  { time: 66000, name: 'ArcMage', hp: 50000, speed: 300, size: 45, color: '#00ccff', exp: 1600, type: 'ArcMageBoss' },
+  { time: 999990, name: 'god', hp: 80000, speed: 300, size: 30, color: '#f0f8ff', exp: 1200, type: 'godBoss' },
+  { time: 999990, name: 'neo', hp: 100000, speed: 300, size: 30, color: '#f0f8ff', exp: 1200, type: 'neoBoss' }
 ];
-const bossTypes = ['BulletQueenBoss', 'ArcMageBoss', 'TeleportHunterBoss'];
+const bossTypes = ['BulletQueenBoss', 'ArcMageBoss', 'TeleportHunterBoss','godBoss','neoBoss'
+];
 // 3. 特別ドロップ
 const DROPS = [
   { type: 'coin', color: 'gold', size: 6, icon: '💰', effect: (p) => { score += 100; showFloat(p.x, p.y, "+100G", "gold"); } },
@@ -323,10 +328,10 @@ let fogActive = false; // 濃い霧が有効かどうか
 let bossArrowAlpha = 0; // 透明度（0〜1）
 const bossArrowFadeSpeed = 0.05; // フェード速度
 const barrier = 0;
-
+let sugaActive = false;
 
 const GAME_EVENTS = [
-    {id : 1 ,time: 100, name: '', effect: () => {  }, color: 'rgba(0, 0, 0, 0)' },
+    {id : 1 ,time: 100, name: '', effect: () => { }, color: 'rgba(0, 0, 0, 0)' },
     {id : 2 ,time: 60, name: '赤い月', effect: () => { eventModifiers.enemyDmgMult = 1.5; }, color: 'rgba(255, 0, 0, 0.9)' },
     {id : 3 ,time: 60, name: '濃い霧', effect: () => { fogActive = true; }, color: 'rgba(50, 50, 50, 0.9)' },
     {id : 4 ,time: 1, name: '濃い霧', effect: () => { fogActive = false; }, color: 'rgba(0, 0, 0, 0)' },
@@ -342,8 +347,8 @@ const GAME_EVENTS = [
     {id : 14,time: 10, name: 'ボスラッシュ', effect: () => { enemies = []; spawnBoss('TeleportHunter'),spawnBoss('ArcMage');bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
     {id : 15,time: 10, name: 'ボスラッシュ2', effect: () => { enemies = []; spawnBoss('TeleportHunter'),spawnBoss('BulletQueen');bossActive = true; }, color: 'rgba(255, 255, 0, 0.8)' },
     
-    {id : 16,time: 70, name: '闇の侵攻', effect: () => { ENEMY_TYPES.forEach(t => t.speed *= 1.1); }, color: 'rgba(0, 0, 0, 0.9)' },
-    {id : 15,time: 80, name: '天上の祝福', effect: () => { eventModifiers.expMult = 2.0; }, color: 'rgba(255, 255, 255, 0.9)' },
+    {id : 16,time: 70, name: '闇の侵攻', effect: () => { sugaActive =true;ENEMY_TYPES.forEach(t => t.speed *= 0.8);　sugasyun(3)　 }, color: 'rgba(0, 0, 0, 0.9)' },
+    {id : 17,time: 10, name: 'フィナーレ', effect: () => { sugaActive = false;enemies = []; spawnBoss('god') }, color: 'rgba(255, 255, 255, 0.9)' },
 ];
 
 //ゲームスタート関数
@@ -656,40 +661,103 @@ function dropItem(x, y, expVal) {
 }
 
 function takeDamage(e, amount) {
-  e.hp -= amount;
-  showFloat(e.x, e.y, Math.floor(amount), "white");
-  
-  if (e.hp <= 0) {
-    enemies = enemies.filter(x => x !== e);
-    killCount++;
-    
-    // 特殊な敵の死亡時処理
-    if(e.type === 'exploder') {
-        let size = 100 * player.areaMult;
-        showFloat(e.x, e.y, "BOOM!", "red");
-        enemies.forEach(other => {
-            if(Math.hypot(e.x-other.x, e.y-other.y) < size) takeDamage(other, 30 * player.dmgMult);
-        });
-    } 
-    else if(e.type === 'splitter') {
-        spawnEnemy('Bat', e.x + 10, e.y + 10);
-        spawnEnemy('Bat', e.x - 10, e.y - 10);
-    } 
-    else if (e.type.includes('Boss')) {
-        bossActive = false;
-        dropItem(e.x, e.y, e.exp); 
-        
-        
-        return;
+
+    e.hp -= amount;
+    showFloat(e.x, e.y, Math.floor(amount), "white");
+
+    if (e.hp <= 0) {
+
+        // =========================
+        // godBossだけ死亡演出関数を呼ぶ
+        // =========================
+        if (e.type === 'godBoss') {
+            startGodBossPhase2(e);
+            return;
+        }
+
+        // =========================
+        // 通常ボス
+        // =========================
+        if (e.type.includes('Boss')) {
+            enemies = enemies.filter(x => x !== e);
+            bossActive = false;
+            killCount++;
+
+            dropItem(e.x, e.y, e.exp);
+            return;
+        }
+
+        // =========================
+        // 通常敵
+        // =========================
+        enemies = enemies.filter(x => x !== e);
+        killCount++;
+
+        if (e.type === 'exploder') {
+
+            let size = 100 * player.areaMult;
+            showFloat(e.x, e.y, "BOOM!", "red");
+
+            enemies.forEach(other => {
+                if (Math.hypot(e.x - other.x, e.y - other.y) < size) {
+                    takeDamage(other, 30 * player.dmgMult);
+                }
+            });
+
+        } 
+        else if (e.type === 'splitter') {
+
+            spawnEnemy('Bat', e.x + 10, e.y + 10);
+            spawnEnemy('Bat', e.x - 10, e.y - 10);
+        }
+
+        dropItem(e.x, e.y, e.exp);
     }
-    
-    // 通常敵のドロップ
-    dropItem(e.x, e.y, e.exp);
-  }
 }
+//演出
+// ======================================
+// takeDamage 内で godBoss 死亡時に呼ぶ
+// ======================================
+// if (e.type === 'godBoss') {
+//     startGodBossPhase2(e);
+//     return;
+// }
 
 
+// ======================================
+// 第二フェーズ演出開始
+// ======================================
+function startGodBossPhase2(e) {
 
+    // 元ボス削除
+    enemies = enemies.filter(x => x !== e);
+
+    bossActive = true;
+    enemyBullets = [];
+
+    // 演出管理オブジェクト
+    godPhase2Event = {
+        active: true,
+
+        state: 0,          // 0=残像上昇 1=粒収束 2=復活爆発
+        timer: 0,
+
+        // 元位置
+        startX: e.x,
+        startY: e.y,
+
+        // プレイヤー上空
+        targetX: player.x,
+        targetY: player.y - 220,
+
+        ghostX: e.x,
+        ghostY: e.y,
+
+        particles: []
+    };
+
+    showFloat(e.x, e.y, "...", "white");
+}
 // 雷演出＆ロジック
 function lightningEffect(target, baseDmg, maxChains) {
 
@@ -1144,12 +1212,51 @@ function spawnBoss(name) {
     bossActive = true;
 }
 
-function fireEnemyBullet(e, isBoss=false, angle=0, type='normal', speedMult=1.0) {
+function fireEnemyBullet(e, isBoss = false, angle = 0, type = 'normal', speedMult = 1.0) {
     let targetAngle = angle || Math.atan2(player.y - e.y, player.x - e.x);
     let speed = (isBoss ? 5 : 4) * speedMult;
     let dmg = isBoss ? 15 : 5;
-    
-    enemyBullets.push({ x: e.x, y: e.y, vx: Math.cos(targetAngle)*speed, vy: Math.sin(targetAngle)*speed, size: 5, dmg: dmg, type: type, life: 5 });
+
+    let size = 5;
+
+    // -----------------------
+    // ★ type別初期値
+    // -----------------------
+    if (type === 'Magic') {
+        size = 30;
+    }
+
+    const bullet = {
+        x: e.x,
+        y: e.y,
+        vx: Math.cos(targetAngle) * speed,
+        vy: Math.sin(targetAngle) * speed,
+
+        baseSize: size,
+        size: size,
+        dmg: dmg,
+        type: type,
+        life: 5,
+        animTimer: 0,
+
+        // ★ デフォルト状態
+        state: 'move',
+
+        // ★ knife用追加（他は無害）
+        spinTimer: 0,
+        spinAngle: 0
+    };
+
+    // -----------------------
+    // ★ knifeだけ初期化
+    // -----------------------
+    if (type === 'knife') {
+        bullet.state = 'spin';
+        bullet.spinTimer = 0.3;
+        bullet.spinAngle = 0;
+    }
+
+    enemyBullets.push(bullet);
 }
 
 // 雑魚敵をプレイヤーの周囲に大量に召喚
@@ -1234,6 +1341,79 @@ function spawnAmbush(count, self) {
 
 }
 
+// ===============================
+// 通常スポーン寄り Ambush版
+// 3体召喚 → クールダウン → 繰り返し
+// Exploder = 50%
+// Bat + Zombie = 残り50%を半々
+// ===============================
+function sugasyun(count, self) {
+
+    const radius = 500;
+    const center = self ?? player;
+
+    let spawned = 0;
+
+    // =======================
+    // 3体召喚 → cooldown
+    // sugaActive が true の間だけ継続
+    // =======================
+    function spawnWave() {
+
+        // 停止条件
+        if (!sugaActive) {
+            showFloat(center.x, center.y, "Suga End", "white");
+            return;
+        }
+
+        // count到達でリセットして無限継続
+        if (spawned >= count) {
+            spawned = 0;
+        }
+
+        // -------------------
+        // 3体召喚
+        // -------------------
+        for (let i = 0; i < 3; i++) {
+
+            if (!sugaActive) return;
+
+            const angle = Math.random() * Math.PI * 2;
+
+            const x = center.x + Math.cos(angle) * radius;
+            const y = center.y + Math.sin(angle) * radius;
+
+            // -------------------
+            // 敵抽選
+            // Exploder 50%
+            // Bat 25%
+            // Zombie 25%
+            // -------------------
+            let enemyType;
+            const r = Math.random();
+
+            if (r < 0.50) {
+                enemyType = "Exploder";
+            } else if (r < 0.75) {
+                enemyType = "Bat";
+            } else {
+                enemyType = "Zombie";
+            }
+
+            spawnEnemy(enemyType, x, y);
+            spawned++;
+        }
+
+        showFloat(center.x, center.y, "Ambush!", "red");
+
+        // -------------------
+        // 次Wave
+        // -------------------
+        setTimeout(spawnWave, 600);
+    }
+
+    spawnWave();
+}
 
 
 function getUpgradeDescription(upgrade) {
@@ -1316,7 +1496,7 @@ function checkLevelUp() {
     while (player.exp >= player.nextExp) {
         player.exp -= player.nextExp;
         player.lv++;
-        player.nextExp = Math.floor(player.nextExp * 1.2) +2;
+        player.nextExp = Math.floor(player.nextExp * 1.2) +1;
         showLevelUpScreen();
         return;
     }
@@ -1506,6 +1686,17 @@ requestAnimationFrame(loop);
 
 
 function update(deltaTime) {
+
+for (let i = afterImages.length - 1; i >= 0; i--) {
+    afterImages[i].life -= deltaTime;
+    afterImages[i].alpha -= deltaTime * 2.5;
+
+    if (afterImages[i].life <= 0 || afterImages[i].alpha <= 0) {
+        afterImages.splice(i, 1);
+    }
+}
+
+
  if (deltaTime <= 0) return;
   if (freezeTimer > 0) freezeTimer -= deltaTime;
   if (slowEnemyTimer > 0) slowEnemyTimer -= deltaTime;
@@ -1936,7 +2127,7 @@ case 1: // 回転弾フェーズ
 }
 
 if (e.type === 'TeleportHunterBoss') {
-    // --- 共通初期化 ---
+    // --- 共通初期化 --
     e.patternTimer ??= 0;      // サイクル全体タイマー
     e.fireTimer ??= 0;         // 連射・発射タイマー
     e.hasTeleported ??= false; // TP済みフラグ
@@ -2080,6 +2271,1482 @@ case 2:
     return; // 他の移動や処理に行かない
 }
 
+
+
+// --- god ---
+if (e.type === 'godBoss') {
+
+    // 初期化
+    e.fireTimer ??= 0;
+    e.patternCase ??= 4;
+    e.patternTimer ??= 0;
+
+    e.phaseCount ??= 0;
+    e.subTimer ??= 0;
+    e.subState ??= 0;
+    e.caseStartDelay ??= 0;
+
+    const angleToPlayer = Math.atan2(player.y - e.y, player.x - e.x);
+
+    switch (e.patternCase) {
+      //周りから玉
+case 0:
+
+if (!e.initDone) {
+
+    // =========================
+    // ★ TP前座標保存
+    // =========================
+    const oldX = e.x;
+    const oldY = e.y;
+
+    // =========================
+    // ★ 新位置へTP
+    // =========================
+    e.x = player.x;
+    e.y = player.y - 400;
+
+    // =========================
+    // ★ 残像生成
+    // =========================
+    if (oldX !== undefined && oldY !== undefined) {
+        spawnAfterImage(oldX, oldY, e.x, e.y, e.color);
+    }
+
+    e.baseX = player.x;
+    e.baseY = player.y;
+
+    e.shotCount = 0;
+    e.subState = 0;
+    e.fireTimer = 0.35;
+
+    let indices = [0, 1, 2, 3];
+    indices.sort(() => Math.random() - 0.5);
+    e.selectedDirs = indices.slice(0, 2);
+
+    e.initDone = true;
+}
+
+//
+// =========================
+// 発射地点設定
+// =========================
+e.magicPoints = [];
+
+const baseAngles = [
+    rad(45),
+    rad(225),
+    rad(135),
+    rad(315)
+];
+
+const radius = 300;
+
+e.selectedDirs.forEach(dirIndex => {
+    const a = baseAngles[dirIndex];
+
+    const mx = e.baseX + Math.cos(a) * radius;
+    const my = e.baseY + Math.sin(a) * radius;
+
+    e.magicPoints.push({ x: mx, y: my });
+});
+
+//
+// =========================
+// 発射タイマー
+// =========================
+e.fireTimer -= deltaTime;
+
+if (e.fireTimer <= 0) {
+    e.fireTimer = 0.35;
+
+    e.selectedDirs.forEach(dirIndex => {
+        const a = baseAngles[dirIndex];
+
+        const spawnX = e.baseX + Math.cos(a) * radius;
+        const spawnY = e.baseY + Math.sin(a) * radius;
+
+        const bulletCount = Math.floor(Math.random() * 7) + 4;
+        const step = (Math.PI * 2) / bulletCount;
+
+        for (let i = 0; i < bulletCount; i++) {
+            const ang = i * step + step / 2;
+
+            fireEnemyBullet(
+                { x: spawnX, y: spawnY },
+                false,
+                ang,
+                'normal',
+                30
+            );
+        }
+    });
+
+    e.shotCount++;
+
+    // =========================
+    // 3回撃ったら再抽選
+    // =========================
+    if (e.shotCount >= 3) {
+        e.shotCount = 0;
+
+        let indices = [0, 1, 2, 3];
+        indices.sort(() => Math.random() - 0.5);
+        e.selectedDirs = indices.slice(0, 2);
+    }
+
+    e.subState++;
+
+    // =========================
+    // 15回発射で終了
+    // =========================
+    if (e.subState >= 15) {
+        e.subState = 0;
+        e.phaseCount++;
+        e.initDone = false;
+
+        if (e.phaseCount >= 5) {
+            e.patternCase = 1;
+            e.phaseCount = 0;
+            e.magicPoints = [];
+        }
+    }
+}
+
+break;
+
+case 1:
+
+    // 初期化
+    if (!e.initDone) {
+        e.timer = 0;          // 全体時間
+        e.tpTimer = 0;        // TP用
+        e.bigFireTimer = 0;   // 落下弾用
+
+        e.burstTimer = 0;     // 連射用
+        e.burstCount = 0;
+        e.isBursting = false;
+
+        e.initDone = true;
+    }
+
+    e.timer += deltaTime;
+    e.tpTimer += deltaTime;
+    e.bigFireTimer -= deltaTime;
+
+    // =====================
+    // ■ 常時：上から落下（20秒間）
+    // =====================
+    if (e.bigFireTimer <= 0 && e.timer <= 20) {
+        e.bigFireTimer = 0.064;
+
+        let rx = player.x + (Math.random() - 0.5) * 800; // ±200
+        let ry = player.y - 300;
+
+        fireEnemyBullet(
+            { x: rx, y: ry },
+            true,
+            Math.PI / 2,
+            'big',
+            50
+        );
+    }
+
+    // =====================
+    // ■ 4秒ごと：TP → 溜め → バースト
+    // =====================
+    if (e.tpTimer >= 2) {
+        e.tpTimer = 0;
+
+        // ランダム位置にTP
+const startX = e.x;
+const startY = e.y;
+
+const endX = player.x + (Math.random() - 0.5) * 50;
+const endY = player.y - 300;
+
+spawnAfterImage(startX, startY, endX, endY, e.color);
+
+// ★ テレポート
+e.x = endX;
+e.y = endY;
+
+        e.chargeTimer = 0.1; // 1秒溜め
+        e.isCharging = true;
+        e.isBursting = false;
+    }
+
+    // 溜め
+    if (e.isCharging) {
+        e.chargeTimer -= deltaTime;
+
+        if (e.chargeTimer <= 0) {
+            e.isCharging = false;
+            e.isBursting = true;
+
+            e.burstTimer = 0;
+            e.burstCount = 0;
+        }
+    }
+
+    // バースト（真下に1発）
+    if (e.isBursting) {
+        e.burstTimer -= deltaTime;
+
+        if (e.burstTimer <= 0) {
+            e.burstTimer = 0.03;
+
+            fireEnemyBullet(
+                { x: e.x, y: e.y },
+                true,
+                Math.PI / 2,
+                'Magic',
+                95 // さらにデカい弾（速度も強め）
+            );
+
+            e.burstCount++;
+
+            if (e.burstCount >= 1) {
+                e.isBursting = false;
+            }
+        }
+    }
+
+    // =====================
+    // ■ フェーズ終了（20秒）
+    // =====================
+    if (e.timer >= 20) {
+        e.initDone = false;
+        e.patternCase = 2;
+    }
+
+    break;
+
+case 2:
+
+if (e.caseStartDelay > 0) {
+    e.caseStartDelay -= deltaTime;
+    break;
+}
+e.caseStartDelay ??= 0;
+
+// =====================
+// 初期化（TP出現）
+// =====================
+if (!e.initDone) {
+
+    const startX = e.x;
+    const startY = e.y;
+
+    const a = Math.random() * Math.PI * 2;
+    const r = 200;
+
+    const endX = player.x + Math.cos(a) * r;
+    const endY = player.y + Math.sin(a) * r;
+
+    // ★ TP残像
+    if (startX !== undefined && startY !== undefined) {
+        spawnAfterImage(startX, startY, endX, endY, e.color);
+    }
+
+    e.x = endX;
+    e.y = endY;
+
+    e.targetX = player.x;
+    e.targetY = player.y;
+
+    const dx = e.targetX - e.x;
+    const dy = e.targetY - e.y;
+    const len = Math.hypot(dx, dy) || 1;
+
+    e.dashVX = dx / len * 8;
+    e.dashVY = dy / len * 8;
+
+    e.chargeTimer = 0.65;
+    e.isCharging = true;
+    e.isDashing = false;
+    e.isCooldown = false;
+
+    e.afterImageTimer = 0;
+
+    e.initDone = true;
+}
+
+e.fireTimer -= deltaTime;
+
+// =====================
+// ★ 溜め
+// =====================
+if (e.isCharging) {
+    e.chargeTimer -= deltaTime;
+
+    if (e.chargeTimer <= 0) {
+        e.isCharging = false;
+        e.isDashing = true;
+    }
+}
+
+// =====================
+// ★ 突進＋弾幕＋残像
+// =====================
+if (e.isDashing) {
+
+    const oldX = e.x;
+    const oldY = e.y;
+
+    e.x += e.dashVX;
+    e.y += e.dashVY;
+
+    // ★ 突進残像（0.03秒ごと）
+    e.afterImageTimer -= deltaTime;
+
+    if (e.afterImageTimer <= 0) {
+        e.afterImageTimer = 0.03;
+        spawnAfterImage(oldX, oldY, e.x, e.y, e.color);
+    }
+
+    // 弾幕
+    if (e.fireTimer <= 0) {
+        e.fireTimer = 0.1;
+
+        const bulletCount = 7;
+        const step = (Math.PI * 2) / bulletCount;
+
+        for (let i = 0; i < bulletCount; i++) {
+            const ang = i * step;
+
+            fireEnemyBullet(
+                { x: e.x, y: e.y },
+                true,
+                ang,
+                'normal',
+                30
+            );
+        }
+    }
+
+    e.subState++;
+
+    // 突進終了
+    if (e.subState >= 120) {
+        e.subState = 0;
+        e.isDashing = false;
+        e.isCooldown = true;
+
+        e.cooldownTimer = 0.6;
+    }
+}
+
+// =====================
+// ★ クールダウン
+// =====================
+if (e.isCooldown) {
+    e.cooldownTimer -= deltaTime;
+
+    if (e.cooldownTimer <= 0) {
+        e.isCooldown = false;
+        e.initDone = false;
+        e.phaseCount++;
+
+        if (e.phaseCount >= 5) {
+            e.patternCase = 3;
+            e.phaseCount = 0;
+        }
+    }
+}
+
+break;
+
+case 3:
+
+if (!e.initDone) {
+
+    // =====================
+    // ★ TP前座標保存
+    // =====================
+    const startX = e.x;
+    const startY = e.y;
+
+    // =====================
+    // ★ ボス初期TP
+    // =====================
+    const endX = player.x;
+    const endY = player.y - 300;
+
+    // ★ 残像TP
+    if (startX !== undefined && startY !== undefined) {
+        spawnAfterImage(startX, startY, endX, endY, e.color);
+    }
+
+    e.x = endX;
+    e.y = endY;
+
+    e.wallCenterX = e.x;
+    e.wallCenterY = e.y;
+
+    e.attackTimer = 0;
+    e.attackCount = 0;
+
+    e.wallPattern = 1;
+
+    // =====================
+    // ★ 壁位置固定
+    // =====================
+    e.fixedWallY = e.wallCenterY - 200;
+
+    e.fixedWallStartRight = e.wallCenterX + 80;
+    e.fixedWallStartLeft  = e.wallCenterX - 80;
+
+    e.initDone = true;
+}
+
+e.attackTimer += deltaTime;
+
+// =========================
+// ★ 1.5秒ごと攻撃
+// =========================
+if (e.attackTimer >= 1.5) {
+    e.attackTimer = 0;
+
+    const spacing = 6;
+    const count = 800;
+
+    const y = e.fixedWallY;
+
+    let startX;
+    let dir;
+
+    // =========================
+    // ★ 左右交互壁
+    // =========================
+    if (e.wallPattern === 1) {
+        startX = e.fixedWallStartRight;
+        dir = -1;
+    } else {
+        startX = e.fixedWallStartLeft;
+        dir = 1;
+    }
+
+    for (let i = 0; i < count; i++) {
+
+        const x = startX + i * spacing * dir;
+
+        fireEnemyBullet(
+            { x, y },
+            true,
+            Math.PI / 2,
+            'wall',
+            33
+        );
+    }
+
+    // =========================
+    // ★ Magic弾
+    // =========================
+    const magicCount = 2 + Math.floor(Math.random() * 2);
+
+    for (let i = 0; i < magicCount; i++) {
+
+        let offset = 0;
+
+        if (magicCount === 2) {
+            offset = (i === 0 ? -15 : 15);
+        } else {
+            offset = (i - 1) * 15;
+        }
+
+        const ang = angleToPlayer + offset * (Math.PI / 180);
+
+        fireEnemyBullet(
+            { x: e.x, y: e.y },
+            true,
+            ang,
+            'big',
+            75
+        );
+    }
+
+    // =========================
+    // ★ 左右切替
+    // =========================
+    e.wallPattern = (e.wallPattern === 1) ? 2 : 1;
+
+    e.attackCount++;
+
+    if (e.attackCount >= 6) {
+        e.attackCount = 0;
+        e.phaseCount++;
+
+        if (e.phaseCount >= 3) {
+
+            // ★ wall弾消去
+            enemyBullets = enemyBullets.filter(b => b.type !== 'wall');
+
+            e.patternCase = 4;
+            e.phaseCount = 0;
+            e.initDone = false;
+        }
+    }
+}
+
+break;
+    // =====================
+    // 5: 突進 + 円形弾
+    // =====================
+case 4: {
+
+    e.throwTasks ??= [];
+    e.case4Started ??= false;
+
+    const COUNT = 50;
+    const RADIUS = 300;
+
+    // =====================
+    // ★ 初回のみ開始（TP＋残像）
+    // =====================
+    if (!e.case4Started) {
+
+        // TP前位置
+        const startX = e.x;
+        const startY = e.y;
+
+        // プレイヤー周囲ランダム位置へTP
+        const a = Math.random() * Math.PI * 2;
+        const endX = player.x + Math.cos(a) * 220;
+        const endY = player.y + Math.sin(a) * 220;
+
+        // ★ 残像TP
+        if (startX !== undefined && startY !== undefined) {
+            spawnAfterImage(startX, startY, endX, endY, e.color);
+        }
+
+        e.x = endX;
+        e.y = endY;
+
+        // 投擲開始
+        e.throwTasks.push({
+            index: 0,
+            nextTime: 0.1,
+            count: COUNT,
+            radius: RADIUS
+        });
+
+        e.case4Started = true;
+    }
+
+    // =====================
+    // ★ ナイフ投擲更新
+    // =====================
+    for (let t of e.throwTasks) {
+
+        t.nextTime -= deltaTime;
+        if (t.nextTime > 0) continue;
+
+        const randAngle = Math.random() * Math.PI * 2;
+
+        const sx = player.x + Math.cos(randAngle) * t.radius;
+        const sy = player.y + Math.sin(randAngle) * t.radius;
+
+        const angle = Math.atan2(player.y - sy, player.x - sx);
+
+        const spread = (t.index - (t.count / 2)) * 0.25;
+
+        fireEnemyBullet(
+            { x: sx, y: sy },
+            true,
+            angle + spread,
+            "knife",
+            70
+        );
+
+        t.index++;
+        t.nextTime = 0.15 + Math.random() * 0.08;
+
+        if (t.index >= t.count) {
+            t.done = true;
+        }
+    }
+
+    // =====================
+    // ★ 終了処理
+    // =====================
+    e.throwTasks = e.throwTasks.filter(t => !t.done);
+
+    if (e.throwTasks.length === 0) {
+
+        e.case4Started = false;
+
+        // 次ループ前に少し待機したいなら
+        e.caseStartDelay = 0.5;
+
+        e.patternCase = 0;
+        e.initDone = false;
+    }
+
+    break;
+}
+// ★ switch終了はここで閉じる
+}
+
+    return;
+}
+
+// --- god ---
+if (e.type === 'neoBoss') {
+
+    // 初期化
+    e.fireTimer ??= 0;
+    e.patternCase ??= 0;
+    e.patternTimer ??= 0;
+
+    e.phaseCount ??= 0;
+    e.subTimer ??= 0;
+    e.subState ??= 0;
+    e.caseStartDelay ??= 0;
+
+    const angleToPlayer = Math.atan2(player.y - e.y, player.x - e.x);
+
+    switch (e.patternCase) {
+      //周りから玉
+case 0:
+
+if (!e.initDone) {
+
+    // =========================
+    // ★ 氷河の海
+    // falseならtrue化＋青フラッシュ
+    // trueならそのまま
+    // =========================
+    if (player.isSliding === false) {
+
+        player.isSliding = true;
+
+        const overlay = document.getElementById('event-animation-overlay');
+
+        if (overlay) {
+            overlay.style.backgroundColor = 'rgba(0, 100, 255, 0.9)';
+            overlay.classList.add('event-flash');
+
+            setTimeout(() => {
+                overlay.classList.remove('event-flash');
+                overlay.style.backgroundColor = 'transparent';
+            }, 500);
+        }
+    }
+
+    // =========================
+    // ★ TP前座標保存
+    // =========================
+    const oldX = e.x;
+    const oldY = e.y;
+
+    // =========================
+    // ★ 新位置へTP
+    // =========================
+    e.x = player.x;
+    e.y = player.y - 400;
+
+    // =========================
+    // ★ 残像生成
+    // =========================
+    if (oldX !== undefined && oldY !== undefined) {
+        spawnAfterImage(oldX, oldY, e.x, e.y, e.color);
+    }
+
+    // =========================
+    // ★ 基準位置
+    // =========================
+    e.baseX = player.x;
+    e.baseY = player.y;
+
+    e.shotCount = 0;
+    e.subState = 0;
+    e.fireTimer = 0.35;
+
+    // =========================
+    // ★ 最初の2地点抽選
+    // =========================
+    let indices = [0, 1, 2, 3];
+    indices.sort(() => Math.random() - 0.5);
+    e.selectedDirs = indices.slice(0, 3);
+
+    e.initDone = true;
+}
+
+// =========================
+// ★ 発射地点設定
+// =========================
+e.magicPoints = [];
+
+const baseAngles = [
+    rad(45),
+    rad(225),
+    rad(135),
+    rad(315)
+];
+
+const radius = 300;
+
+e.selectedDirs.forEach(dirIndex => {
+
+    const a = baseAngles[dirIndex];
+
+    const mx = e.baseX + Math.cos(a) * radius;
+    const my = e.baseY + Math.sin(a) * radius;
+
+    e.magicPoints.push({
+        x: mx,
+        y: my
+    });
+});
+
+// =========================
+// ★ 発射タイマー
+// =========================
+e.fireTimer -= deltaTime;
+
+if (e.fireTimer <= 0) {
+
+    e.fireTimer = 0.4;
+
+    e.selectedDirs.forEach(dirIndex => {
+
+        const a = baseAngles[dirIndex];
+
+        const spawnX = e.baseX + Math.cos(a) * radius;
+        const spawnY = e.baseY + Math.sin(a) * radius;
+
+        const bulletCount = Math.floor(Math.random() * 7) + 4;
+        const step = (Math.PI * 2) / bulletCount;
+
+        for (let i = 0; i < bulletCount; i++) {
+
+            const ang = i * step + step / 2;
+
+            fireEnemyBullet(
+                { x: spawnX, y: spawnY },
+                true,
+                ang,
+                'normal',
+                30
+            );
+        }
+    });
+
+    e.shotCount++;
+
+    // =========================
+    // ★ 3回撃ったら再抽選
+    // =========================
+    if (e.shotCount >= 3) {
+
+        e.shotCount = 0;
+
+        let indices = [0, 1, 2, 3];
+        indices.sort(() => Math.random() - 0.5);
+        e.selectedDirs = indices.slice(0, 2);
+    }
+
+    e.subState++;
+
+    // =========================
+    // ★ 15回発射で1セット終了
+    // =========================
+    if (e.subState >= 15) {
+
+        e.subState = 0;
+        e.phaseCount++;
+        e.initDone = false;
+
+        // =====================
+        // ★ 5セットで次フェーズ
+        // =====================
+        if (e.phaseCount >= 5) {
+
+            e.patternCase = 1;
+            e.phaseCount = 0;
+
+            // 魔法陣消去
+            e.magicPoints = [];
+        }
+    }
+}
+
+break;
+case 1:
+
+// =====================
+// 初期化
+// =====================
+if (!e.initDone) {
+
+    e.timer = 0;          // 全体時間（雨用）
+    e.tpTimer = 0;        // TP周期
+    e.bigFireTimer = 0;   // 雨弾
+
+    // 突進用
+    e.burstTimer = 0;
+    e.burstCount = 0;
+    e.isBursting = false;
+
+    e.chargeTimer = 0;
+    e.isCharging = false;
+    e.isDashing = false;
+    e.isCooldown = false;
+
+    e.subState = 0;
+
+    e.afterImageTimer = 0;
+
+    e.initDone = true;
+}
+
+e.timer += deltaTime;
+e.tpTimer += deltaTime;
+e.bigFireTimer -= deltaTime;
+e.fireTimer = (e.fireTimer ?? 0) - deltaTime;
+
+// =====================
+// ★ 雨（常時攻撃）
+// =====================
+if (e.bigFireTimer <= 0 && e.timer <= 20) {
+    e.bigFireTimer = 0.4;
+
+    let rx = player.x + (Math.random() - 0.5) * 800;
+    let ry = player.y - 300;
+
+    fireEnemyBullet(
+        { x: rx, y: ry },
+        true,
+        Math.PI / 2,
+        'big',
+        50
+    );
+}
+
+// =====================
+// ★ TP → 突進サイクル
+// =====================
+if (e.tpTimer >= 2) {
+    e.tpTimer = 0;
+
+    const startX = e.x;
+    const startY = e.y;
+
+    const a = Math.random() * Math.PI * 2;
+    const r = 200;
+
+    const endX = player.x + Math.cos(a) * r;
+    const endY = player.y + Math.sin(a) * r;
+
+    spawnAfterImage(startX, startY, endX, endY, e.color);
+
+    e.x = endX;
+    e.y = endY;
+
+    // =====================
+    // ★ 突進準備
+    // =====================
+    e.targetX = player.x;
+    e.targetY = player.y;
+
+    const dx = e.targetX - e.x;
+    const dy = e.targetY - e.y;
+    const len = Math.hypot(dx, dy) || 1;
+
+    e.dashVX = dx / len * 8;
+    e.dashVY = dy / len * 8;
+
+    e.chargeTimer = 0.9;
+    e.isCharging = true;
+    e.isDashing = false;
+    e.isCooldown = false;
+
+    e.subState = 0;
+}
+
+// =====================
+// ★ 溜め
+// =====================
+if (e.isCharging) {
+    e.chargeTimer -= deltaTime;
+
+    if (e.chargeTimer <= 0) {
+        e.isCharging = false;
+        e.isDashing = true;
+    }
+}
+
+// =====================
+// ★ 突進（case2統合）
+// =====================
+if (e.isDashing) {
+
+    const oldX = e.x;
+    const oldY = e.y;
+
+    e.x += e.dashVX;
+    e.y += e.dashVY;
+
+    // 残像
+    e.afterImageTimer -= deltaTime;
+
+    if (e.afterImageTimer <= 0) {
+        e.afterImageTimer = 0.03;
+        spawnAfterImage(oldX, oldY, e.x, e.y, e.color);
+    }
+
+    // 弾幕
+    if (e.fireTimer <= 0) {
+        e.fireTimer = 0.3;
+
+        const bulletCount = 5;
+        const step = (Math.PI * 2) / bulletCount;
+
+        for (let i = 0; i < bulletCount; i++) {
+
+            const ang = i * step;
+
+            fireEnemyBullet(
+                { x: e.x, y: e.y },
+                true,
+                ang,
+                'normal',
+                30
+            );
+        }
+    }
+
+    e.subState++;
+
+    if (e.subState >= 120) {
+        e.subState = 0;
+        e.isDashing = false;
+        e.isCooldown = true;
+        e.cooldownTimer = 0.6;
+    }
+}
+
+// =====================
+// ★ クールダウン
+// =====================
+if (e.isCooldown) {
+    e.cooldownTimer -= deltaTime;
+
+    if (e.cooldownTimer <= 0) {
+        e.isCooldown = false;
+        e.phaseCount++;
+
+        if (e.phaseCount >= 5) {
+            e.patternCase = 2;
+            e.phaseCount = 0;
+        }
+
+        e.initDone = false;
+    }
+}
+
+// =====================
+// ★ フェーズ終了
+// =====================
+if (e.timer >= 20) {
+    e.initDone = false;
+    e.patternCase = 2;
+}
+
+break;
+
+case 2: {
+
+    e.throwTasks ??= [];
+    e.case4Started ??= false;
+
+    const COUNT = 80;
+    const RADIUS = 300;
+
+    // =====================
+    // 初期化
+    // =====================
+    if (!e.case4Started) {
+
+        e.timer = 0;
+
+        e.rotateAngle = 0;
+        e.magicTimer = 0;
+
+        const startX = e.x;
+        const startY = e.y;
+
+        const a = Math.random() * Math.PI * 2;
+        const endX = player.x + Math.cos(a) * 220;
+        const endY = player.y + Math.sin(a) * 220;
+
+        spawnAfterImage(startX, startY, endX, endY, e.color);
+
+        e.x = endX;
+        e.y = endY;
+
+        e.throwTasks.push({
+            index: 0,
+            nextTime: 0.9,
+            count: COUNT,
+            radius: RADIUS
+        });
+
+        e.case4Started = true;
+    }
+
+    // =====================
+    // 時間進行
+    // =====================
+    e.timer += deltaTime;
+
+    const phase1 = 1 / 3;
+    const phase2 = 2 / 3;
+
+    // =====================
+    // ★ 移動停止判定（ここが核心）
+    // =====================
+    let freeze = false;
+
+    if (
+        (e.timer >= phase1 && e.timer < phase1 + 1) ||
+        (e.timer >= phase2 && e.timer < phase2 + 1)
+    ) {
+        freeze = true;
+    }
+
+    // =====================
+    // ★ 回転移動（停止中はスキップ）
+    // =====================
+    if (!freeze) {
+
+e.rotateAngle += (0.008 + Math.sin(Date.now() * 0.001) * 0.003) * 0.5;
+
+        const oldX = e.x;
+        const oldY = e.y;
+
+        e.x = player.x + Math.cos(e.rotateAngle) * RADIUS;
+        e.y = player.y + Math.sin(e.rotateAngle) * RADIUS;
+
+        spawnAfterImage(oldX, oldY, e.x, e.y, e.color);
+    }
+
+    // =====================
+    // ★ 弾幕（常時）
+    // =====================
+    for (let t of e.throwTasks) {
+
+        t.nextTime -= deltaTime;
+        if (t.nextTime > 0) continue;
+
+        const randAngle = Math.random() * Math.PI * 2;
+
+        const sx = player.x + Math.cos(randAngle) * t.radius;
+        const sy = player.y + Math.sin(randAngle) * t.radius;
+
+        const angle = Math.atan2(player.y - sy, player.x - sx);
+        const spread = (t.index - (t.count / 2)) * 0.25;
+
+        fireEnemyBullet(
+            { x: sx, y: sy },
+            true,
+            angle + spread,
+            "knife",
+            70
+        );
+
+        t.index++;
+        t.nextTime = 0.3 + Math.random() * 0.01;
+
+        if (t.index >= t.count) {
+            t.done = true;
+        }
+    }
+
+    e.throwTasks = e.throwTasks.filter(t => !t.done);
+
+    // =====================
+    // ★ 魔法弾（2秒）
+    // =====================
+    e.magicTimer += deltaTime;
+
+    if (e.magicTimer >= 2) {
+        e.magicTimer = 0;
+
+        const base = Math.random() * Math.PI * 2;
+
+        for (let i = 0; i < 5; i++) {
+            const ang = base + (i * (Math.PI * 2 / 5));
+
+            fireEnemyBullet(
+                { x: e.x, y: e.y },
+                true,
+                ang,
+                "magic",
+                30
+            );
+        }
+    }
+
+    // =====================
+    // 終了
+    // =====================
+    if (e.throwTasks.length === 0) {
+
+        e.case4Started = false;
+        e.patternCase = 3;
+        e.initDone = false;
+    }
+
+    break;
+}
+    // =====================
+    // 5: 突進 + 円形弾
+    // =====================
+case 3: {
+
+    // =====================================
+    // 初期化
+    // =====================================
+
+    e.caseStarted ??= false;
+
+    // パターン実行回数（5回で case 0へ）
+    e.patternCount ??= 0;
+
+    // -1 = 抽選可能
+    // 0~3 = 実行中
+    // 999 = 待機中
+    e.patternType ??= -1;
+
+    e.waitTimer ??= 0;
+    e.phaseDone ??= false;
+
+    // 常時4方向弾
+    e.baseShotTimer ??= 0;
+    e.crossAngle ??= 0;
+
+    // knife系
+    e.attackTimer ??= 0;
+    e.lifeTimer ??= 0;
+
+    // fan系
+    e.fanTimer ??= 0;
+    e.fanPhase ??= 0;
+
+    // big系
+    e.bigInit ??= false;
+    e.bigTimer ??= 0;
+    e.bigList ??= [];
+
+    const BIG_RADIUS = 600;
+
+    // =====================================
+    // 初回だけプレイヤー上へTP
+    // =====================================
+
+    if (!e.caseStarted) {
+
+        const sx = e.x;
+        const sy = e.y;
+
+        const ex = player.x;
+        const ey = player.y - 140;
+
+        spawnAfterImage(sx, sy, ex, ey, e.color);
+
+        e.x = ex;
+        e.y = ey;
+
+        e.caseStarted = true;
+    }
+
+    // =====================================
+    // 常時：4方向基礎撃ち
+    // =====================================
+
+    e.baseShotTimer += deltaTime;
+    e.crossAngle += 0.002;
+
+    if (e.baseShotTimer >= 0.08) {
+
+        e.baseShotTimer = 0;
+
+        const dirs = [
+            0,
+            Math.PI / 2,
+            Math.PI,
+            Math.PI * 1.5
+        ];
+
+        for (let i = 0; i < 4; i++) {
+
+            fireEnemyBullet(
+                { x: e.x, y: e.y },
+                true,
+                e.crossAngle + dirs[i],
+                "wall",
+                30
+            );
+        }
+    }
+
+    // =====================================
+    // パターン終了
+    // =====================================
+
+    if (e.phaseDone) {
+
+        e.phaseDone = false;
+
+        // 実行回数加算
+        e.patternCount++;
+
+        // -----------------------------
+        // 5回終了 → case 0へ戻る
+        // -----------------------------
+        if (e.patternCount >= 5) {
+
+            enemies = enemies.filter(b =>
+                b.type !== "wall" &&
+                b.type !== "big"
+            );
+
+            e.case = 0;
+            e.caseStarted = false;
+
+            e.patternType = -1;
+            e.patternCount = 0;
+
+            e.waitTimer = 0;
+
+            e.bigInit = false;
+            e.bigTimer = 0;
+            e.bigList = [];
+
+            e.attackTimer = 0;
+            e.lifeTimer = 0;
+
+            e.fanTimer = 0;
+            e.fanPhase = 0;
+
+            break;
+        }
+
+        // -----------------------------
+        // 通常待機
+        // -----------------------------
+        e.patternType = 999;
+        e.waitTimer = 0.6;
+
+        enemies = enemies.filter(b =>
+            b.type !== "wall" &&
+            b.type !== "big"
+        );
+    }
+
+    // =====================================
+    // 待機中
+    // =====================================
+
+    if (e.patternType === 999) {
+
+        e.waitTimer -= deltaTime;
+
+        if (e.waitTimer <= 0) {
+
+            e.bigInit = false;
+            e.bigTimer = 0;
+            e.bigList = [];
+
+            e.attackTimer = 0;
+            e.lifeTimer = 0;
+
+            e.fanTimer = 0;
+            e.fanPhase = 0;
+
+            e.patternType = -1;
+        }
+    }
+
+    // =====================================
+    // 抽選
+    // =====================================
+
+    if (e.patternType === -1) {
+        e.patternType = Math.floor(Math.random() * 4);
+    }
+
+    // =====================================
+    // パターン① 扇形（3回）
+    // =====================================
+
+    if (e.patternType === 0) {
+
+        e.fanTimer -= deltaTime;
+
+        if (e.fanPhase < 3 && e.fanTimer <= 0) {
+
+            e.fanTimer = 0.9;
+
+            const count = Math.floor(Math.random() * 4) + 1;
+
+            const base = Math.atan2(
+                player.y - e.y,
+                player.x - e.x
+            );
+
+            const spread = Math.PI / 3;
+
+            for (let i = 0; i < count; i++) {
+
+                fireEnemyBullet(
+                    { x: e.x, y: e.y },
+                    true,
+                    base + (i / count - 0.5) * spread,
+                    "magic",
+                    30
+                );
+            }
+
+            e.fanPhase++;
+        }
+
+        if (e.fanPhase >= 3) {
+            e.phaseDone = true;
+        }
+    }
+
+    // =====================================
+    // パターン② big囲い
+    // =====================================
+
+    else if (e.patternType === 1) {
+
+        if (!e.bigInit) {
+
+            const bullets = 10;
+
+            for (let i = 0; i < bullets; i++) {
+
+                const ang = (Math.PI * 2 / bullets) * i;
+
+                const bx = e.x + Math.cos(ang) * BIG_RADIUS;
+                const by = e.y + Math.sin(ang) * BIG_RADIUS;
+
+                fireEnemyBullet(
+                    { x: bx, y: by },
+                    true,
+                    Math.atan2(
+                        e.y - by,
+                        e.x - bx
+                    ),
+                    "big",
+                    60
+                );
+            }
+
+            e.bigInit = true;
+            e.bigTimer = 5;
+        }
+
+        e.bigTimer -= deltaTime;
+
+        if (e.bigTimer <= 0) {
+            e.phaseDone = true;
+        }
+    }
+
+    // =====================================
+    // パターン③ ナイフ連射
+    // =====================================
+
+    else if (e.patternType === 2) {
+
+        e.attackTimer += deltaTime;
+        e.lifeTimer += deltaTime;
+
+        if (e.attackTimer >= 0.2) {
+
+            e.attackTimer = 0;
+
+            fireEnemyBullet(
+                { x: e.x, y: e.y },
+                true,
+                Math.atan2(
+                    player.y - e.y,
+                    player.x - e.x
+                ),
+                "knife",
+                70
+            );
+        }
+
+        if (e.lifeTimer >= 3) {
+            e.phaseDone = true;
+        }
+    }
+
+    // =====================================
+    // パターン④ 円周上にナイフ3本配置
+    // =====================================
+
+    else if (e.patternType === 3) {
+
+        if (!e.bigInit) {
+
+            const knives = 3;
+            e.bigList = [];
+
+            for (let i = 0; i < knives; i++) {
+
+                const ang = (Math.PI * 2 / knives) * i;
+
+                const bx = e.x + Math.cos(ang) * BIG_RADIUS;
+                const by = e.y + Math.sin(ang) * BIG_RADIUS;
+
+                const bullet = fireEnemyBullet(
+                    { x: bx, y: by },
+                    true,
+                    Math.atan2(
+                        e.y - by,
+                        e.x - bx
+                    ),
+                    "knife",
+                    30
+                );
+
+                e.bigList.push(bullet);
+            }
+
+            e.bigInit = true;
+            e.bigTimer = 2;
+        }
+
+        e.bigTimer -= deltaTime;
+
+        if (e.bigTimer <= 0) {
+
+            e.bigList.forEach(b => {
+                const index = enemies.indexOf(b);
+                if (index !== -1) {
+                    enemies.splice(index, 1);
+                }
+            });
+
+            e.bigList = [];
+            e.phaseDone = true;
+        }
+    }
+
+    break;
+}
+// ★ switch終了はここで閉じる
+}
+
+    return;
+}
 
 
       // --- ArcMageBoss ---
@@ -2336,7 +4003,6 @@ if (dist < player.size + e.size) {
 
   }); //forEach 正常終了
 } //enemySpeedMult > 0 正常終了
-
 // 4.5. 敵弾の移動と判定（完全安全版）
 for (let i = enemyBullets.length - 1; i >= 0; i--) {
   const eb = enemyBullets[i];
@@ -2355,9 +4021,81 @@ for (let i = enemyBullets.length - 1; i >= 0; i--) {
   // --- 初期値保証 ---
   if (typeof eb.vx !== 'number') eb.vx = 0;
   if (typeof eb.vy !== 'number') eb.vy = 0;
-  if (typeof eb.life !== 'number') eb.life = 3;
   if (typeof eb.size !== 'number') eb.size = 4;
 
+  // ★ Magic用の初期化（安全に）
+  if (eb.type === 'Magic') {
+    if (typeof eb.baseSize !== 'number') eb.baseSize = eb.size;
+    if (typeof eb.animTimer !== 'number') eb.animTimer = 0;
+  }
+
+// ★ ここに入れる
+if (typeof eb.life !== 'number') {
+    if (eb.type === 'wall') {
+        eb.life = 140; // 壁は消えない or ほぼ消えない
+    } 
+else if (eb.type === 'qwe') {
+        eb.life = 0.2;   // 2秒で消える bigg
+    }
+    else {
+        eb.life = 3;
+    }
+}
+if (eb.type === 'knife') {
+
+  // =========================
+  // ① 初期化保険
+  // =========================
+  eb.spinTimer ??= 0.3;
+  eb.spinAngle ??= 0;
+  eb.renderAngle ??= 0;
+  eb.renderAngleOffset ??= 0;
+  eb.state ??= 'spin';
+
+  // =========================
+  // ② 回転フェーズ
+  // =========================
+  if (eb.state === 'spin') {
+
+    eb.spinTimer -= deltaTime;
+
+    // 見た目回転
+    eb.spinAngle += 0.15;
+
+    // ★ 回転中の表示角度
+    eb.renderAngle = eb.spinAngle;
+
+    // 完全停止
+    eb.vx = 0;
+    eb.vy = 0;
+
+    // 発射
+    if (eb.spinTimer <= 0) {
+
+      eb.state = 'move';
+
+      const angle = Math.atan2(player.y - eb.y, player.x - eb.x);
+      const speed = 200;
+
+      eb.vx = Math.cos(angle) * speed;
+      eb.vy = Math.sin(angle) * speed;
+
+      // ★ 発射角度固定
+      eb.renderAngle = angle;
+
+      // ★★★ ここだけいじれば見た目変わる
+eb.renderAngleOffset = Math.PI / 2;   // 90°
+    }
+
+    continue;
+  }
+
+  // =========================
+  // ③ 移動
+  // =========================
+  eb.x += eb.vx * deltaTime;
+  eb.y += eb.vy * deltaTime;
+}
   const type = eb.type ?? 'normal';
 
   // --- 追尾弾 ---
@@ -2382,9 +4120,29 @@ for (let i = enemyBullets.length - 1; i >= 0; i--) {
     eb.vy = Math.sin(currentAngle) * speed;
   }
 
+  // =====================
+  // ★ Magic弾のサイズ変化
+  // =====================
+  if (type === 'Magic') {
+    eb.animTimer += deltaTime;
+
+    // 0.6秒周期（0.3拡大→0.3縮小）
+    const t = (eb.animTimer % 0.6) / 0.6;
+
+    // なめらか変化
+    const scale = Math.sin(t * Math.PI);
+
+    eb.size = eb.baseSize + scale * 15;
+  }
+
+  // --- 移動 ---
   eb.x += eb.vx * deltaTime;
   eb.y += eb.vy * deltaTime;
-  eb.life -= deltaTime;
+if (eb.type === 'wall') {
+    eb.life -= deltaTime * 0.05; // ★10倍長持ち
+} else {
+    eb.life -= deltaTime;
+}
 
   // --- 衝突判定 ---
   const dist = Math.hypot(eb.x - player.x, eb.y - player.y);
@@ -2398,8 +4156,6 @@ for (let i = enemyBullets.length - 1; i >= 0; i--) {
     enemyBullets.splice(i, 1);
   }
 }
-
-
 
   // 4.7. Garlic/HolyWater の常時ダメージ処理
   const garlicBullet = bullets.find(b => b.type === 'garlic');
@@ -2567,7 +4323,11 @@ holyWaterBullets.forEach(b => {
       items.splice(i, 1);
     }
   }
-
+//
+  // ======================================
+// 毎フレーム update() の最後あたりで呼ぶ
+// ======================================
+updateGodBossPhase2(deltaTime);
 // 7. 定期回復と時間更新 & イベント処理
 gameTime += deltaTime;
 updateHUD();
@@ -2655,7 +4415,57 @@ function draw() {
       ctx.fillText(it.data.icon, screenX, screenY + 4);
     }
   });
+//魔法陣
+  enemies.forEach(e => {
+    let screenX = getScreenX(e.x);
+    let screenY = getScreenY(e.y);
+    let size = e.size * 1.5;
 
+    ctx.fillStyle = e.color;
+    ctx.fillRect(screenX - size/2, screenY - size/2, size, size);
+
+    // HP Bar
+    ctx.fillStyle = '#444';
+    ctx.fillRect(screenX - size/2, screenY - size/2 - 8, size, 3);
+
+    ctx.fillStyle = 'red';
+    ctx.fillRect(
+        screenX - size/2,
+        screenY - size/2 - 8,
+        (e.hp / e.maxHp) * size,
+        3
+    );
+
+    // ★ 魔法陣描画
+    if (e.magicPoints) {
+        e.magicPoints.forEach(p => {
+            drawMagic(
+                ctx,
+                getScreenX(p.x),
+                getScreenY(p.y),
+                40
+            );
+        });
+    }
+});
+  //tp残像
+  afterImages.forEach(a => {
+    ctx.save();
+    ctx.globalAlpha = a.alpha;
+    ctx.fillStyle = a.color;
+
+    const sx = getScreenX(a.x);
+    const sy = getScreenY(a.y);
+
+    ctx.fillRect(
+        sx - a.size / 2,
+        sy - a.size / 2,
+        a.size,
+        a.size
+    );
+
+    ctx.restore();
+});
   // 4. 味方弾・武器エフェクト 
   bullets.forEach(b => {
     let screenX = getScreenX(b.x);
@@ -2901,6 +4711,8 @@ if (player.bibleBarrier && player.bibleBarrier.active) {
     ctx.restore();
 }
 
+
+
 //BOSSへの矢印
 
 const boss = enemies.find(e => bossTypes.includes(e.type));
@@ -2984,15 +4796,120 @@ if (boss) {
 
   ctx.restore();
   
-  // 6. 敵弾 (四角形)
-  enemyBullets.forEach(eb => {
-    let screenX = getScreenX(eb.x);
-    let screenY = getScreenY(eb.y);
-    let size = eb.size * (eb.type === 'big' ? 3 : 1);
-    
-    ctx.fillStyle = eb.type === 'homing' ? 'purple' : 'red';
-    ctx.fillRect(screenX - size/2, screenY - size/2, size, size);
-  });
+
+// 6. 敵弾 (描画)
+enemyBullets.forEach(eb => {
+
+  let screenX = getScreenX(eb.x);
+  let screenY = getScreenY(eb.y);
+
+  let size = eb.size * (eb.type === 'big' ? 3 : 1);
+if (eb.type === 'knife') {
+
+    ctx.save();
+    ctx.translate(screenX, screenY);
+
+    // =========================
+    // ★ 向き（180度追加回転）
+    // =========================
+    const angle =
+        (eb.renderAngle || 0) +
+        (eb.renderAngleOffset || 0) +
+        Math.PI * 2;
+
+    ctx.rotate(angle);
+
+    // =========================
+    // ★ 軽い残像
+    // =========================
+    for (let i = 3; i >= 1; i--) {
+
+        ctx.save();
+        ctx.globalAlpha = 0.08 * i;
+        ctx.translate(0, i * 8);
+
+        ctx.fillStyle = "#cccccc";
+
+        ctx.beginPath();
+        ctx.moveTo(0, -20);
+        ctx.lineTo(3, -8);
+        ctx.lineTo(3, 18);
+        ctx.lineTo(0, 22);
+        ctx.lineTo(-3, 18);
+        ctx.lineTo(-3, -8);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    // =========================
+    // ★ 本体（細身）
+    // =========================
+    const bladeGrad = ctx.createLinearGradient(0, -18, 0, 18);
+    bladeGrad.addColorStop(0, "#ffffff");
+    bladeGrad.addColorStop(0.4, "#dcdcdc");
+    bladeGrad.addColorStop(0.75, "#999999");
+    bladeGrad.addColorStop(1, "#555555");
+
+    ctx.fillStyle = bladeGrad;
+
+    // 刀身（細く）
+    ctx.beginPath();
+    ctx.moveTo(0, -22);
+    ctx.lineTo(3, -8);
+    ctx.lineTo(3, 18);
+    ctx.lineTo(0, 24);
+    ctx.lineTo(-3, 18);
+    ctx.lineTo(-3, -8);
+    ctx.closePath();
+    ctx.fill();
+
+    // ハイライト
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -18);
+    ctx.lineTo(0, 18);
+    ctx.stroke();
+
+    // 鍔
+    ctx.fillStyle = "#b8860b";
+    ctx.fillRect(-6, 16, 12, 3);
+
+    // 柄
+    ctx.fillStyle = "#222";
+    ctx.fillRect(-2, 19, 4, 11);
+
+    // 柄巻き
+    ctx.strokeStyle = "#d4af37";
+    ctx.lineWidth = 1;
+
+    for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-2, 21 + i * 3);
+        ctx.lineTo(2, 23 + i * 3);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(2, 21 + i * 3);
+        ctx.lineTo(-2, 23 + i * 3);
+        ctx.stroke();
+    }
+
+    // 軽い発光
+    ctx.shadowColor = "rgba(255,255,255,0.35)";
+    ctx.shadowBlur = 5;
+
+    ctx.restore();
+    return;
+}
+  // =====================
+  // ★ 既存弾
+  // =====================
+  ctx.fillStyle = eb.type === 'homing' ? 'purple' : 'red';
+  ctx.fillRect(screenX - size/2, screenY - size/2, size, size);
+});
   
   // 7. 隕石の警告円
   meteorWarning.forEach(m => {
@@ -3007,7 +4924,10 @@ if (boss) {
   });
 
 drawFog(ctx, canvas);
-
+// ======================================
+// draw() 内で enemies描画の後くらいで呼ぶ
+// ======================================
+drawGodBossPhase2(ctx);
 
   // 8. フローティングテキスト
   floaters.forEach(f => {
@@ -3228,5 +5148,298 @@ function drawFog(ctx, canvas) {
     ctx.drawImage(fogCanvas, 0, 0);
 }
 
-init();
+function normalizeAngle(a) {
+    while (a > Math.PI) a -= Math.PI * 2;
+    while (a < -Math.PI) a += Math.PI * 2;
+    return a;
+}
 
+function spawnKnife(x, y, angle) {
+
+    return {
+        x: x,
+        y: y,
+        vx: Math.cos(angle) * 6,
+        vy: Math.sin(angle) * 6,
+        angle: angle,
+        life: 120,
+        type: "knife"
+    };
+}
+
+function updateKnife(k) {
+    k.x += k.vx;
+    k.y += k.vy;
+
+    k.rotation += 0.2;
+    k.life--;
+}
+//魔法陣展開
+function drawMagic(ctx, x, y, size) {
+  console.log("drawMagic called", x, y, size);
+    const magicCanvas = document.createElement("canvas");
+    magicCanvas.width = size * 3;
+    magicCanvas.height = size * 3;
+
+    const mctx = magicCanvas.getContext("2d");
+
+    const cx = magicCanvas.width / 2;
+    const cy = magicCanvas.height / 2;
+
+    // 回転
+    const rot = performance.now() * 0.002;
+
+    mctx.save();
+    mctx.translate(cx, cy);
+    mctx.rotate(rot);
+
+    // 発光
+    mctx.shadowColor = "rgba(180,100,255,1)";
+    mctx.shadowBlur = 15;
+
+    mctx.strokeStyle = "rgba(180,100,255,0.9)";
+    mctx.lineWidth = 2;
+
+    // 外円
+    mctx.beginPath();
+    mctx.arc(0, 0, size, 0, Math.PI * 2);
+    mctx.stroke();
+
+    // 中円
+    mctx.beginPath();
+    mctx.arc(0, 0, size * 0.72, 0, Math.PI * 2);
+    mctx.stroke();
+
+    // 内円
+    mctx.beginPath();
+    mctx.arc(0, 0, size * 0.45, 0, Math.PI * 2);
+    mctx.stroke();
+
+    // 五芒星
+    for (let i = 0; i < 5; i++) {
+        const a1 = (Math.PI * 2 / 5) * i - Math.PI / 2;
+        const a2 = (Math.PI * 2 / 5) * ((i + 2) % 5) - Math.PI / 2;
+
+        mctx.beginPath();
+        mctx.moveTo(
+            Math.cos(a1) * size * 0.8,
+            Math.sin(a1) * size * 0.8
+        );
+        mctx.lineTo(
+            Math.cos(a2) * size * 0.8,
+            Math.sin(a2) * size * 0.8
+        );
+        mctx.stroke();
+    }
+
+    // 小円装飾
+    for (let i = 0; i < 8; i++) {
+        const a = (Math.PI * 2 / 8) * i;
+        const px = Math.cos(a) * size * 0.88;
+        const py = Math.sin(a) * size * 0.88;
+
+        mctx.beginPath();
+        mctx.arc(px, py, size * 0.06, 0, Math.PI * 2);
+        mctx.stroke();
+    }
+
+    mctx.restore();
+console.log("drawImage実行直前", x, y, magicCanvas.width, magicCanvas.height);
+    // 本canvasへ描画
+    ctx.drawImage(
+        magicCanvas,
+        x - magicCanvas.width / 2,
+        y - magicCanvas.height / 2
+    );
+}
+
+function spawnAfterImage(x1, y1, x2, y2, color) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+
+    const count = 8;
+
+    for (let i = 0; i < count; i++) {
+        const t = i / count;
+
+        afterImages.push({
+            x: x1 + dx * t,
+            y: y1 + dy * t,
+            alpha: 0.6 - t * 0.6,
+            size: 40 - t * 10,
+            life: 0.25,
+            color: color
+        });
+    }
+}
+
+function updateGodBossPhase2(deltaTime) {
+
+    if (!godPhase2Event || !godPhase2Event.active) return;
+
+    const g = godPhase2Event;
+    g.timer += deltaTime;
+
+    // ===============================
+    // 0. 残像でプレイヤー上へ移動
+    // ===============================
+    if (g.state === 0) {
+
+        const speed = 0.06;
+
+        g.ghostX += (g.targetX - g.ghostX) * speed;
+        g.ghostY += (g.targetY - g.ghostY) * speed;
+
+        // 白粒 trail
+        g.particles.push({
+            x: g.ghostX,
+            y: g.ghostY,
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2,
+            life: 25,
+            size: 3
+        });
+
+        if (Math.hypot(g.targetX - g.ghostX, g.targetY - g.ghostY) < 15) {
+            g.state = 1;
+            g.timer = 0;
+
+            // 周囲から粒生成
+            for (let i = 0; i < 140; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const r = 220 + Math.random() * 120;
+
+                g.particles.push({
+                    x: g.targetX + Math.cos(a) * r,
+                    y: g.targetY + Math.sin(a) * r,
+                    vx: 0,
+                    vy: 0,
+                    life: 999,
+                    gather: true,
+                    size: 2 + Math.random() * 2
+                });
+            }
+        }
+    }
+
+    // ===============================
+    // 1. 粒が集まる
+    // ===============================
+    else if (g.state === 1) {
+
+        g.particles.forEach(p => {
+
+            if (!p.gather) return;
+
+            p.x += (g.targetX - p.x) * 0.06;
+            p.y += (g.targetY - p.y) * 0.06;
+        });
+
+        if (g.timer >= 2.2) {
+
+            g.state = 2;
+            g.timer = 0;
+
+            // 爆散粒
+            g.particles = [];
+
+            for (let i = 0; i < 220; i++) {
+
+                const a = Math.random() * Math.PI * 2;
+                const sp = 2 + Math.random() * 6;
+
+                g.particles.push({
+                    x: g.targetX,
+                    y: g.targetY,
+                    vx: Math.cos(a) * sp,
+                    vy: Math.sin(a) * sp,
+                    life: 40,
+                    size: 2 + Math.random() * 3
+                });
+            }
+
+            // 第二形態ボス出現
+            spawnBoss('neo');
+
+            // 出現位置補正
+            const b = enemies[enemies.length - 1];
+            b.x = g.targetX;
+            b.y = g.targetY;
+            b.phase2 = true;
+
+            showFloat(g.targetX, g.targetY, "ASCENDED", "white");
+        }
+    }
+
+    // ===============================
+    // 2. 放出して終了
+    // ===============================
+    else if (g.state === 2) {
+
+        if (g.timer >= 1.0) {
+            g.active = false;
+        }
+    }
+
+    // 粒共通更新
+    g.particles.forEach(p => {
+        p.x += p.vx || 0;
+        p.y += p.vy || 0;
+        p.life--;
+    });
+
+    g.particles = g.particles.filter(p => p.life > 0);
+}
+function drawGodBossPhase2(ctx) {
+
+    if (!godPhase2Event || !godPhase2Event.active) return;
+
+    const g = godPhase2Event;
+
+    // 残像本体
+    if (g.state === 0) {
+
+        const sx = getScreenX(g.ghostX);
+        const sy = getScreenY(g.ghostY);
+
+        ctx.save();
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(sx, sy, 28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // 粒描画
+    g.particles.forEach(p => {
+
+        const sx = getScreenX(p.x);
+        const sy = getScreenY(p.y);
+
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life / 40);
+        ctx.fillStyle = "white";
+
+        ctx.beginPath();
+        ctx.arc(sx, sy, p.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    });
+
+    // 集束中の塊
+    if (g.state === 1) {
+
+        const sx = getScreenX(g.targetX);
+        const sy = getScreenY(g.targetY);
+
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.beginPath();
+        ctx.arc(sx, sy, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+init();

@@ -2896,7 +2896,7 @@ if (e.type === 'neoBoss') {
 
     // 初期化
     e.fireTimer ??= 0;
-    e.patternCase ??= 0;
+    e.patternCase ??= 3;
     e.patternTimer ??= 0;
 
     e.phaseCount ??= 0;
@@ -3110,7 +3110,7 @@ e.fireTimer = (e.fireTimer ?? 0) - deltaTime;
 // ★ 雨（常時攻撃）
 // =====================
 if (e.bigFireTimer <= 0 && e.timer <= 20) {
-    e.bigFireTimer = 0.4;
+    e.bigFireTimer = 0.15;
 
     let rx = player.x + (Math.random() - 0.5) * 800;
     let ry = player.y - 300;
@@ -3198,7 +3198,7 @@ if (e.isDashing) {
 
     // 弾幕
     if (e.fireTimer <= 0) {
-        e.fireTimer = 0.3;
+        e.fireTimer = 0.2;
 
         const bulletCount = 5;
         const step = (Math.PI * 2) / bulletCount;
@@ -3261,7 +3261,7 @@ case 2: {
     e.throwTasks ??= [];
     e.case4Started ??= false;
 
-    const COUNT = 80;
+    const COUNT = 100;
     const RADIUS = 300;
 
     // =====================
@@ -3357,7 +3357,7 @@ e.rotateAngle += (0.008 + Math.sin(Date.now() * 0.001) * 0.003) * 0.5;
         );
 
         t.index++;
-        t.nextTime = 0.3 + Math.random() * 0.01;
+        t.nextTime = 0.2 + Math.random() * 0.01;
 
         if (t.index >= t.count) {
             t.done = true;
@@ -3371,7 +3371,7 @@ e.rotateAngle += (0.008 + Math.sin(Date.now() * 0.001) * 0.003) * 0.5;
     // =====================
     e.magicTimer += deltaTime;
 
-    if (e.magicTimer >= 2) {
+    if (e.magicTimer >= 1) {
         e.magicTimer = 0;
 
         const base = Math.random() * Math.PI * 2;
@@ -3412,7 +3412,7 @@ case 3: {
 
     e.caseStarted ??= false;
 
-    // パターン実行回数（5回で case 0へ）
+    // ★ パターン実行回数（4回で case 0へ）
     e.patternCount ??= 0;
 
     // -1 = 抽選可能
@@ -3500,20 +3500,20 @@ case 3: {
 
         e.phaseDone = false;
 
-        // 実行回数加算
+        // ★ 実行回数加算
         e.patternCount++;
 
-        // -----------------------------
-        // 5回終了 → case 0へ戻る
-        // -----------------------------
-        if (e.patternCount >= 5) {
+        // =================================
+        // ★ 4回で case 0 に戻る
+        // =================================
+        if (e.patternCount >= 7) {
 
             enemies = enemies.filter(b =>
                 b.type !== "wall" &&
                 b.type !== "big"
             );
 
-            e.case = 0;
+            e.patternCase = 0;   // ←ここ重要
             e.caseStarted = false;
 
             e.patternType = -1;
@@ -3534,11 +3534,11 @@ case 3: {
             break;
         }
 
-        // -----------------------------
+        // =================================
         // 通常待機
-        // -----------------------------
+        // =================================
         e.patternType = 999;
-        e.waitTimer = 0.6;
+        e.waitTimer = 0.3;
 
         enemies = enemies.filter(b =>
             b.type !== "wall" &&
@@ -3578,46 +3578,47 @@ case 3: {
         e.patternType = Math.floor(Math.random() * 4);
     }
 
-    // =====================================
-    // パターン① 扇形（3回）
-    // =====================================
+// =====================================
+// パターン① 全方向弾（8発 → 9発 → 8発）
+// =====================================
 
-    if (e.patternType === 0) {
+if (e.patternType === 0) {
 
-        e.fanTimer -= deltaTime;
+    e.fanTimer -= deltaTime;
 
-        if (e.fanPhase < 3 && e.fanTimer <= 0) {
+    if (e.fanPhase < 4 && e.fanTimer <= 0) {
 
-            e.fanTimer = 0.9;
+        e.fanTimer = 0.7;
 
-            const count = Math.floor(Math.random() * 4) + 1;
+        // 発射数：1回目8発、2回目9発、3回目8発
+        let count = 16;
+        if (e.fanPhase === 1) count = 14;
+        if (e.fanPhase === 2) count = 16;
+        if (e.fanPhase === 3) count = 10;
 
-            const base = Math.atan2(
-                player.y - e.y,
-                player.x - e.x
+        // 少し回転させたいなら毎回ランダム開始角
+        const base = Math.random() * Math.PI * 2;
+
+        for (let i = 0; i < count; i++) {
+
+            const ang = base + (Math.PI * 2 / count) * i;
+
+            fireEnemyBullet(
+                { x: e.x, y: e.y },
+                true,
+                ang,
+                "magic",
+                30
             );
-
-            const spread = Math.PI / 3;
-
-            for (let i = 0; i < count; i++) {
-
-                fireEnemyBullet(
-                    { x: e.x, y: e.y },
-                    true,
-                    base + (i / count - 0.5) * spread,
-                    "magic",
-                    30
-                );
-            }
-
-            e.fanPhase++;
         }
 
-        if (e.fanPhase >= 3) {
-            e.phaseDone = true;
-        }
+        e.fanPhase++;
     }
 
+    if (e.fanPhase >= 3) {
+        e.phaseDone = true;
+    }
+}
     // =====================================
     // パターン② big囲い
     // =====================================
@@ -3626,7 +3627,7 @@ case 3: {
 
         if (!e.bigInit) {
 
-            const bullets = 10;
+            const bullets = 14;
 
             for (let i = 0; i < bullets; i++) {
 
@@ -3638,17 +3639,14 @@ case 3: {
                 fireEnemyBullet(
                     { x: bx, y: by },
                     true,
-                    Math.atan2(
-                        e.y - by,
-                        e.x - bx
-                    ),
+                    Math.atan2(e.y - by, e.x - bx),
                     "big",
-                    60
+                    80
                 );
             }
 
             e.bigInit = true;
-            e.bigTimer = 5;
+            e.bigTimer = 3;
         }
 
         e.bigTimer -= deltaTime;
@@ -3674,10 +3672,7 @@ case 3: {
             fireEnemyBullet(
                 { x: e.x, y: e.y },
                 true,
-                Math.atan2(
-                    player.y - e.y,
-                    player.x - e.x
-                ),
+                Math.atan2(player.y - e.y, player.x - e.x),
                 "knife",
                 70
             );
@@ -3696,7 +3691,7 @@ case 3: {
 
         if (!e.bigInit) {
 
-            const knives = 3;
+            const knives = 5;
             e.bigList = [];
 
             for (let i = 0; i < knives; i++) {
@@ -3709,10 +3704,7 @@ case 3: {
                 const bullet = fireEnemyBullet(
                     { x: bx, y: by },
                     true,
-                    Math.atan2(
-                        e.y - by,
-                        e.x - bx
-                    ),
+                    Math.atan2(e.y - by, e.x - bx),
                     "knife",
                     30
                 );
@@ -3730,9 +3722,7 @@ case 3: {
 
             e.bigList.forEach(b => {
                 const index = enemies.indexOf(b);
-                if (index !== -1) {
-                    enemies.splice(index, 1);
-                }
+                if (index !== -1) enemies.splice(index, 1);
             });
 
             e.bigList = [];
@@ -3742,6 +3732,7 @@ case 3: {
 
     break;
 }
+
 // ★ switch終了はここで閉じる
 }
 

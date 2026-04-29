@@ -2896,7 +2896,7 @@ if (e.type === 'neoBoss') {
 
     // 初期化
     e.fireTimer ??= 0;
-    e.patternCase ??= 3;
+    e.patternCase ??= 0;
     e.patternTimer ??= 0;
 
     e.phaseCount ??= 0;

@@ -79,8 +79,7 @@ function getSwepItem(swepId) {
 /// 1. 強化アイテムリスト
 const UPGRADES = [
   // 武器 (ID 0-14)
- 
-    
+
   { id: 'wand', type: 'wep', name: '魔法の杖', icon: '🪄', maxLv: 8,
     wepId: 0, range: 400,
     desc: '魔法の光を放ち的に攻撃', 
@@ -1457,12 +1456,10 @@ function selectUpgrade(upgrade) {
     // ===== サブ武器（SWEＰ）=====
     } else if (upgrade.type === 'swep') {
 
-        let sw = player.sweapons.find(w => w.id === upgrade.swepId);
-        if (sw) {
+        let sw = player.sweapons.find(w => w.swepId === upgrade.swepId);        if (sw) {
             if (sw.lv < upgrade.maxLv) sw.lv++;
         } else {
-            player.sweapons.push({ id: upgrade.swepId, lv: 1, cd: 0 });
-        }
+            player.sweapons.push({ swepId: upgrade.swepId, lv: 1, cd: 0 });        }
 
     // ===== ステータス =====
     } else if (upgrade.type === 'stat') {
@@ -1779,34 +1776,35 @@ let nextY = player.y + (joystick.dy / maxSpeed) * finalSpeed * deltaTime;
 // --- 後: 敵や弾丸との衝突判定に続く ---
 //スペシャル武器
 
-  // 2. 武器の発射制御
-// 2. 特殊武器（swep）のクールダウン制御
-player.sweapons.forEach(w => {
-  if (w.cd > 0) {
-    w.cd -= deltaTime;
-    return;
-  }
+// 発動処理トレースログ
 
-  // 発動条件チェック
-  if (canActivateSwep(w)) {
-    fireSpecialWeapon(w);
-    w.cd = getsWeaponBaseCD(w.swepId) * player.cdMult * eventModifiers.cdMult;
-  }
-});
-
-
-
-  // 2. 武器の発射制御
 player.weapons.forEach(w => {
+
+  // ===== SWEP =====
+  if (canActivateSwep(w)) {
+    console.log("[SWEP] TRUE", w.swepId);
+
+    fireSpecialWeapon(w);
+
+    // 専用CD
+    w.swepCd = getsWeaponBaseCD(w.swepId) * player.cdMult * eventModifiers.cdMult;
+  }
+
+  // SWEPのCD減少
+  if (w.swepCd > 0) {
+    w.swepCd -= deltaTime;
+  }
+
+  // ===== 通常武器 =====
   if (w.cd > 0) {
     w.cd -= deltaTime;
   } else {
     fireWeapon(w);
     w.cd = getWeaponBaseCD(w.id) * player.cdMult * eventModifiers.cdMult;
   }
+
 });
-
-
+updateSpecialWeapons(deltaTime);
   // 3. 弾の移動 & 寿命 (味方)
   for (let i = bullets.length - 1; i >= 0; i--) {
     let b = bullets[i];
@@ -5100,6 +5098,8 @@ function updateSpecialWeapons(deltaTime) {
     }
 
     if (canActivateSwep(w)) {
+      console.log("[SWEP] FIRE", w.swepId);
+
       fireSpecialWeapon(w);
       w.cd = getsWeaponBaseCD(w.swepId);
     }
